@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+let _flashTimer = null;
+
 const useUIStore = create((set) => ({
   tab: 'dashboard',
   catIdx: 0,
@@ -27,8 +29,9 @@ const useUIStore = create((set) => ({
 
   // Flash a toast message for 2 seconds
   flash: (msg) => {
+    clearTimeout(_flashTimer);
     set({ toast: msg });
-    setTimeout(() => set({ toast: null }), 2000);
+    _flashTimer = setTimeout(() => set({ toast: null }), 2000);
   },
 }));
 

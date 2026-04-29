@@ -11,30 +11,41 @@ const useBudgetStore = create(
     appData: null,       // AppData object (null while loading)
     dark: false,
     initialized: false,
+    _initializing: false,
 
     // ── Init ──
     initStore: async () => {
+      if (get().initialized || get()._initializing) return;
+      set({ _initializing: true });
       const [storedDark, loaded] = await Promise.all([
         loadStore('budget-dark-mode', false),
         loadStore('budget-app-v2', defaultData()),
       ]);
-      // Migration: ensure protected Loans category exists
-      const hasLoans = loaded.categories?.some(c => c.id === 'loans');
-      if (!hasLoans) {
-        loaded.categories = [...(loaded.categories || []), { id: 'loans', name: 'Loans', maxYears: 35, protected: true, fields: [] }];
+      if (loaded._schemaVersion >= 2) {
+        // already migrated — skip
       } else {
-        loaded.categories = loaded.categories.map(c =>
-          c.id === 'loans' ? { ...c, protected: true, fields: [] } : c
-        );
+        // Migration: ensure protected Loans category exists
+        const hasLoans = loaded.categories?.some(c => c.id === 'loans');
+        if (!hasLoans) {
+          loaded.categories = [...(loaded.categories || []), { id: 'loans', name: 'Loans', maxYears: 35, protected: true, fields: [] }];
+        } else {
+          loaded.categories = loaded.categories.map(c =>
+            c.id === 'loans' ? { ...c, protected: true, fields: [] } : c
+          );
+        }
+        if (!loaded.loanTypes) loaded.loanTypes = [];
+        if (!loaded.loanPaid) loaded.loanPaid = {};
+        // Migration: ensure all categories have subcategories + colOrder arrays
+        loaded.categories = loaded.categories.map(c => ({
+          ...c, subcategories: c.subcategories || [], colOrder: c.colOrder || []
+        }));
+        loaded._schemaVersion = 2;
       }
-      if (!loaded.loanTypes) loaded.loanTypes = [];
-      if (!loaded.loanPaid) loaded.loanPaid = {};
-      // Migration: ensure all categories have subcategories + colOrder arrays
-      loaded.categories = loaded.categories.map(c => ({
-        ...c, subcategories: c.subcategories || [], colOrder: c.colOrder || []
-      }));
       saveStore('budget-app-v2', loaded);
       set({ appData: loaded, dark: storedDark, initialized: true });
+      // Sync initial theme classes (one-time side-effect; subscriber wired in Phase 1c)
+      document.documentElement.classList.toggle('theme-dark', storedDark);
+      document.documentElement.classList.toggle('theme-light', !storedDark);
     },
 
     // ── Persistence helper ──
@@ -48,8 +59,6 @@ const useBudgetStore = create(
       const next = !get().dark;
       set({ dark: next });
       saveStore('budget-dark-mode', next);
-      document.documentElement.classList.toggle('theme-dark', next);
-      document.documentElement.classList.toggle('theme-light', !next);
     },
 
     // ── Expense actions ──
