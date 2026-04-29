@@ -1,5 +1,7 @@
 export const CY = new Date().getFullYear();
 export const CM = new Date().getMonth();
+export const getCY = () => new Date().getFullYear();
+export const getCM = () => new Date().getMonth();
 export const MIN_YEAR = 2025;
 export const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 export const mk = (y, m) => `${y}-${String(m + 1).padStart(2, "0")}`;
