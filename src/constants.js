@@ -10,7 +10,10 @@ export const DEFAULT_CATS = [
 ];
 
 export const defaultData = () => ({
-  categories: DEFAULT_CATS.map(c => ({ ...c, fields: [...(c.fields || [])] })),
+  categories: DEFAULT_CATS.map(c => ({
+    ...c,
+    fields: (c.fields || []).map(f => ({ ...f })),
+  })),
   expenses: {},
   loanTypes: [],
   loanPaid: {},
