@@ -1,0 +1,11 @@
+export const CY = new Date().getFullYear();
+export const CM = new Date().getMonth();
+export const MIN_YEAR = 2025;
+export const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+export const mk = (y, m) => `${y}-${String(m + 1).padStart(2, "0")}`;
+export const parseMk = (k) => { const [y, m] = k.split("-"); return { y: +y, m: +m - 1 }; };
+export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+export const today = () => new Date().toISOString().split("T")[0];
+export const fmtDate = (d) => { if (!d) return ""; const [y,m,dd] = d.split("-"); return `${dd}/${m}/${y}`; };
+export const parseEuDate = (s) => { if (!s) return ""; const p = s.replace(/[.\-]/g,"/").split("/"); if (p.length!==3) return ""; const [dd,mm,yy]=p; const iso=`${yy.padStart(4,"0")}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?iso:""; };
+export const todayEu = () => fmtDate(today());
