@@ -5,39 +5,12 @@ import {
   PieChart, Pie, Cell, AreaChart, Area, CartesianGrid, Legend,
   LineChart, Line, RadialBarChart, RadialBar, Treemap
 } from "recharts";
-import { loadStore, saveStore } from "./storage";
-/* ─── Constants ─── */
-const CY = new Date().getFullYear();
-const CM = new Date().getMonth();
-const MIN_YEAR = 2025;
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const mk = (y, m) => `${y}-${String(m + 1).padStart(2, "0")}`;
-const parseMk = (k) => { const [y, m] = k.split("-"); return { y: +y, m: +m - 1 }; };
-const fmt = (n) => new Intl.NumberFormat("en-US",{minimumFractionDigits:0,maximumFractionDigits:2}).format(n||0);
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const today = () => new Date().toISOString().split("T")[0];
-const fmtDate = (d) => { if (!d) return ""; const [y,m,dd] = d.split("-"); return `${dd}/${m}/${y}`; };
-const parseEuDate = (s) => { if (!s) return ""; const p = s.replace(/[.\-]/g,"/").split("/"); if (p.length!==3) return ""; const [dd,mm,yy]=p; const iso=`${yy.padStart(4,"0")}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?iso:""; };
-const todayEu = () => fmtDate(today());
-const reorder = (arr, from, to) => { const n = [...arr]; const [item] = n.splice(from, 1); n.splice(to, 0, item); return n; };
-const clamp01 = v => Math.max(0, Math.min(1, v));
-const _lerp = (a, b, t) => a + (b - a) * t;
-const easeOut3 = t => 1 - Math.pow(1 - t, 3);
-const easeInOut2 = t => t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2) / 2;
-/* Evaluate simple arithmetic expressions like "350 + 250 + 200" safely */
-const evalExpr = (val) => {
-  const str = String(val ?? "").replace(/\s/g, "");
-  if (!str) return NaN;
-  if (!/^[0-9+\-*/.()]+$/.test(str)) return parseFloat(str);
-  try {
-    // eslint-disable-next-line no-new-func
-    const result = new Function("return (" + str + ")")();
-    if (typeof result === "number" && isFinite(result)) return Math.round(result * 100) / 100;
-  } catch {}
-  return parseFloat(str);
-};
-
-const CHART_COLORS = ["#68C0A4","#F06B5E","#6B8FD4","#F5C542","#9B7EBD","#D4453A","#4ABAB5","#D49BC4","#7B9EC4","#E8A87C","#1A9E76","#B8706B"];
+import { mk, parseMk, uid, today, fmtDate, parseEuDate, todayEu, getCY, getCM, MIN_YEAR, MONTHS } from './utils/dates';
+import { fmt } from './utils/formatters';
+import { reorder, evalExpr, clamp01, _lerp, easeOut3, easeInOut2 } from './utils/expressions';
+import { CHART_COLORS } from './constants';
+import useBudgetStore from './store/useBudgetStore';
+import useUIStore from './store/useUIStore';
 
 /* 3D active bar shape — lifts, scales, adds top highlight & glow */
 function Bar3D(props) {
@@ -78,68 +51,56 @@ function Bar3D(props) {
   );
 }
 
-const DEFAULT_CATS = [
-  { id: "rent", name: "Rent / Mortgage", maxYears: 5, fields: [] },
-  { id: "utilities", name: "Utilities", maxYears: 5, fields: [{ id: "f1", name: "Provider", type: "text" }] },
-  { id: "subscriptions", name: "Subscriptions", maxYears: 5, fields: [{ id: "f1", name: "Service", type: "text" }] },
-  { id: "insurance", name: "Insurance", maxYears: 5, fields: [] },
-  { id: "loans", name: "Loans", maxYears: 35, protected: true, fields: [] },
-  { id: "transport", name: "Transport", maxYears: 5, fields: [] },
-];
-
-const defaultData = () => ({
-  categories: DEFAULT_CATS,
-  expenses: {},
-  loanTypes: [],
-  loanPaid: {},
-  fixedIncomes: [],
-  variableIncomes: [],
-});
-
 /* ═══════════ MAIN APP ═══════════ */
 export default function BudgetApp() {
-  const [store, setStore] = useState(null);
-  const [tab, setTab] = useState("dashboard");
-  const [catIdx, setCatIdx] = useState(0);
-  const [expYear, setExpYear] = useState(CY);
-  const [budgetYear, setBudgetYear] = useState(CY);
-  const [modal, setModal] = useState(null);
-  const [toast, setToast] = useState(null);
-  const [paidPicker, setPaidPicker] = useState(null);
-  const [dark, setDark] = useState(false);
-  const [expSel, setExpSel] = useState(new Set());
-  const [varSel, setVarSel] = useState(new Set());
-  const [dragIdx, setDragIdx] = useState(null);
-  const [introDone, setIntroDone] = useState(false);
+  // Budget data from store
+  const appData = useBudgetStore(state => state.appData);
+  const dark = useBudgetStore(state => state.dark);
+  const toggleDark = useBudgetStore(state => state.toggleDark);
 
-  useEffect(() => { loadStore("budget-dark-mode", false).then(setDark); }, []);
-  const toggleDark = () => { const next = !dark; setDark(next); saveStore("budget-dark-mode", next); };
-  /* Sync theme class to <html> so portals (rendered into document.body) inherit CSS variables */
-  useEffect(() => {
-    document.documentElement.classList.toggle("theme-dark", dark);
-    document.documentElement.classList.toggle("theme-light", !dark);
-  }, [dark]);
-  useEffect(() => {
-    loadStore("budget-app-v2", defaultData()).then(loaded => {
-      // Migration: ensure protected Loans category exists
-      const hasLoans = loaded.categories?.some(c => c.id === "loans");
-      if (!hasLoans) {
-        loaded.categories = [...(loaded.categories || []), { id: "loans", name: "Loans", maxYears: 35, protected: true, fields: [] }];
-      } else {
-        loaded.categories = loaded.categories.map(c =>
-          c.id === "loans" ? { ...c, protected: true, fields: [] } : c
-        );
-      }
-      if (!loaded.loanTypes) loaded.loanTypes = [];
-      if (!loaded.loanPaid) loaded.loanPaid = {};
-      // Migration: ensure all categories have subcategories array
-      loaded.categories = loaded.categories.map(c => ({...c, subcategories: c.subcategories || [], colOrder: c.colOrder || []}));
-      setStore(loaded);
-      saveStore("budget-app-v2", loaded);
-    });
-  }, []);
-  const save = useCallback((next) => { setStore(next); saveStore("budget-app-v2", next); }, []);
-  const flash = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
+  // Budget actions
+  const setExp = useBudgetStore(state => state.setExp);
+  const delExp = useBudgetStore(state => state.delExp);
+  const setExpPaid = useBudgetStore(state => state.setExpPaid);
+  const setAllSubsPaid = useBudgetStore(state => state.setAllSubsPaid);
+  const bulkDelExp = useBudgetStore(state => state.bulkDelExp);
+  const addCategory = useBudgetStore(state => state.addCategory);
+  const updateCategory = useBudgetStore(state => state.updateCategory);
+  const deleteCategory = useBudgetStore(state => state.deleteCategory);
+  const reorderCategories = useBudgetStore(state => state.reorderCategories);
+  const updateCatColOrder = useBudgetStore(state => state.updateCatColOrder);
+  const addLoanType = useBudgetStore(state => state.addLoanType);
+  const updateLoanType = useBudgetStore(state => state.updateLoanType);
+  const deleteLoanType = useBudgetStore(state => state.deleteLoanType);
+  const toggleLoanPaid = useBudgetStore(state => state.toggleLoanPaid);
+  const setLoanPaidDate = useBudgetStore(state => state.setLoanPaidDate);
+  const toggleAllLoansPaid = useBudgetStore(state => state.toggleAllLoansPaid);
+  const addFixedIncome = useBudgetStore(state => state.addFixedIncome);
+  const updateFixedIncome = useBudgetStore(state => state.updateFixedIncome);
+  const deleteFixedIncome = useBudgetStore(state => state.deleteFixedIncome);
+  const addVarIncome = useBudgetStore(state => state.addVarIncome);
+  const updateVarIncome = useBudgetStore(state => state.updateVarIncome);
+  const deleteVarIncome = useBudgetStore(state => state.deleteVarIncome);
+  const bulkDelVarInc = useBudgetStore(state => state.bulkDelVarInc);
+
+  // Selectors
+  const getExp = useBudgetStore(state => state.getExp);
+  const getLoanAmountForMonth = useBudgetStore(state => state.getLoanAmountForMonth);
+  const getLoansTotalForMonth = useBudgetStore(state => state.getLoansTotalForMonth);
+  const getFixedIncomeForMonth = useBudgetStore(state => state.getFixedIncomeForMonth);
+  const getVarIncomeForMonth = useBudgetStore(state => state.getVarIncomeForMonth);
+  const getTotalExpensesForMonth = useBudgetStore(state => state.getTotalExpensesForMonth);
+  const getPaidExpForMonth = useBudgetStore(state => state.getPaidExpForMonth);
+  const getAnticipatedExpForMonth = useBudgetStore(state => state.getAnticipatedExpForMonth);
+  const getCatPaidForMonth = useBudgetStore(state => state.getCatPaidForMonth);
+  const getSuggestedDay = useBudgetStore(state => state.getSuggestedDay);
+
+  // UI state
+  const { tab, catIdx, expYear, budgetYear, modal, toast, paidPicker, expSel, varSel, dragIdx, introDone } = useUIStore();
+  const { setTab, setCatIdx, setExpYear, setBudgetYear, setModal, setPaidPicker, setExpSel, setVarSel, setDragIdx, setIntroDone, flash } = useUIStore();
+
+  // Destructure appData for convenient access (guard against null)
+  const { categories = [], expenses = {}, fixedIncomes = [], variableIncomes = [], loanTypes = [], loanPaid = {} } = appData || {};
 
   if (!introDone) return (
     <div style={{background:'#0A0A10',minHeight:'100vh',position:'relative',overflow:'hidden'}}>
@@ -148,7 +109,7 @@ export default function BudgetApp() {
     </div>
   );
 
-  if (!store) return (
+  if (!appData) return (
     <div className={dark?"theme-dark":"theme-light"} style={S.loadWrap}>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,animation:"fadeIn .5s"}}>
         <div style={{width:44,height:44,border:"2px solid var(--border)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin .8s linear infinite",boxShadow:"0 0 20px var(--accent-glow)"}} />
@@ -157,309 +118,8 @@ export default function BudgetApp() {
     </div>
   );
 
-  const { categories, expenses, fixedIncomes, variableIncomes, loanTypes = [], loanPaid = {} } = store;
   const cat = categories[catIdx] || categories[0];
-
-  const getLoanAmountForMonth = (lt, monthKey) =>
-    (lt.startFrom && lt.endAt && monthKey >= lt.startFrom && monthKey <= lt.endAt) ? (lt.amount || 0) : 0;
-
-  const getLoansTotalForMonth = (monthKey) =>
-    loanTypes.reduce((s, lt) => s + getLoanAmountForMonth(lt, monthKey), 0);
-
-  const getExp = (catId, key) => {
-    if (catId === "loans") {
-      const total = getLoansTotalForMonth(key);
-      return total > 0 ? { amount: total } : null;
-    }
-    return expenses?.[catId]?.[key] || null;
-  };
-
-  const setExp = (catId, key, entry, applyMonths) => {
-    const next = { ...store, expenses: { ...store.expenses } };
-    if (!next.expenses[catId]) next.expenses[catId] = {};
-    next.expenses[catId] = { ...next.expenses[catId] };
-    next.expenses[catId][key] = entry;
-    if (applyMonths > 0) {
-      const { y, m } = parseMk(key);
-      const maxY = CY + (categories.find(c => c.id === catId)?.maxYears || 5);
-      let cy = y, cm = m + 1, count = 0;
-      while (count < applyMonths) {
-        if (cm > 11) { cm = 0; cy++; }
-        if (cy >= maxY) break;
-        next.expenses[catId][mk(cy, cm)] = { ...entry, paid: false, paidDate: "", subPaid: {} };
-        cm++; count++;
-      }
-    }
-    save(next);
-    flash(applyMonths > 0 ? `Applied to ${applyMonths} more month${applyMonths!==1?"s":""}!` : "Saved!");
-  };
-
-  const delExp = (catId, key) => {
-    const next = { ...store, expenses: { ...store.expenses } };
-    if (next.expenses[catId]) {
-      next.expenses[catId] = { ...next.expenses[catId] };
-      delete next.expenses[catId][key];
-    }
-    save(next);
-    flash("Deleted!");
-  };
-
-  const setExpPaid = (catId, key, paid, paidDate) => {
-    const next = { ...store, expenses: { ...store.expenses } };
-    if (!next.expenses[catId]?.[key]) return;
-    next.expenses[catId] = { ...next.expenses[catId] };
-    next.expenses[catId][key] = { ...next.expenses[catId][key], paid: !!paid, paidDate: paid ? (paidDate || today()) : "" };
-    save(next);
-  };
-
-  const setAllSubsPaid = (catId, key, paid, paidDate) => {
-    const next = { ...store, expenses: { ...store.expenses } };
-    if (!next.expenses[catId]?.[key]) return;
-    next.expenses[catId] = { ...next.expenses[catId] };
-    const entry = { ...next.expenses[catId][key] };
-    const subAmounts = entry.subAmounts || {};
-    const newSubPaid = {};
-    if (paid) {
-      Object.entries(subAmounts).forEach(([scId, amt]) => {
-        if (amt > 0) newSubPaid[scId] = { paid: true, paidDate: paidDate || today() };
-      });
-    }
-    const allPd = paid && Object.keys(subAmounts).filter(id => subAmounts[id] > 0).every(id => newSubPaid[id]?.paid);
-    const latestDate = allPd ? Object.values(newSubPaid).reduce((l, sp) => sp.paidDate > l ? sp.paidDate : l, "") : "";
-    entry.subPaid = newSubPaid;
-    entry.paid = allPd;
-    entry.paidDate = latestDate;
-    next.expenses[catId][key] = entry;
-    save(next);
-  };
-
-  const bulkDelExp = (catId, keys) => {
-    const next = { ...store, expenses: { ...store.expenses } };
-    if (!next.expenses[catId]) return;
-    next.expenses[catId] = { ...next.expenses[catId] };
-    keys.forEach(k => delete next.expenses[catId][k]);
-    save(next);
-    setExpSel(new Set());
-    flash(`Deleted ${keys.length} entr${keys.length === 1 ? "y" : "ies"}!`);
-  };
-
-  const bulkDelVarInc = (ids) => {
-    const next = { ...store, variableIncomes: variableIncomes.filter(v => !ids.has(v.id)) };
-    save(next);
-    setVarSel(new Set());
-    flash(`Deleted ${ids.size} entr${ids.size === 1 ? "y" : "ies"}!`);
-  };
-
-  const addCategory = (catData) => {
-    const next = { ...store, categories: [...store.categories, { ...catData, id: uid() }] };
-    save(next);
-    setCatIdx(next.categories.length - 1);
-    flash("Category added!");
-  };
-
-  const updateCategory = (idx, catData, silent) => {
-    const next = { ...store, categories: store.categories.map((c, i) => i === idx ? { ...c, ...catData } : c) };
-    save(next);
-    if (!silent) flash("Category updated!");
-  };
-
-  const deleteCategoryFn = (idx) => {
-    const c = store.categories[idx];
-    if (c?.protected) return;
-    const cid = c?.id;
-    const next = { ...store, categories: store.categories.filter((_, i) => i !== idx), expenses: { ...store.expenses } };
-    if (cid && next.expenses[cid]) delete next.expenses[cid];
-    save(next);
-    if (catIdx >= next.categories.length) setCatIdx(Math.max(0, next.categories.length - 1));
-    flash("Category deleted!");
-  };
-
-  const reorderCategories = (from, to) => {
-    const next = { ...store, categories: reorder(store.categories, from, to) };
-    save(next);
-    if (catIdx === from) setCatIdx(to);
-    else if (from < catIdx && to >= catIdx) setCatIdx(catIdx - 1);
-    else if (from > catIdx && to <= catIdx) setCatIdx(catIdx + 1);
-  };
-
-  const updateCatColOrder = (catId, colOrder) => {
-    const next = { ...store, categories: store.categories.map(c => c.id === catId ? { ...c, colOrder } : c) };
-    save(next);
-  };
-
-  /* ─── Loan helpers ─── */
-  const addLoanType = (lt) => {
-    const next = { ...store, loanTypes: [...loanTypes, { ...lt, id: uid() }] };
-    save(next);
-    flash("Loan added!");
-  };
-
-  const updateLoanType = (ltId, data) => {
-    const next = { ...store, loanTypes: loanTypes.map(lt => lt.id === ltId ? { ...lt, ...data } : lt) };
-    save(next);
-    flash("Loan updated!");
-  };
-
-  const deleteLoanType = (ltId) => {
-    const nextLP = { ...loanPaid };
-    delete nextLP[ltId];
-    const next = { ...store, loanTypes: loanTypes.filter(lt => lt.id !== ltId), loanPaid: nextLP };
-    save(next);
-    flash("Loan deleted!");
-  };
-
-  const toggleLoanPaid = (ltId, monthKey) => {
-    const nextLP = { ...loanPaid };
-    if (!nextLP[ltId]) nextLP[ltId] = {};
-    nextLP[ltId] = { ...nextLP[ltId] };
-    const cur = nextLP[ltId][monthKey];
-    if (cur?.paid) {
-      delete nextLP[ltId][monthKey];
-    } else {
-      nextLP[ltId][monthKey] = { paid: true, paidDate: today() };
-    }
-    save({ ...store, loanPaid: nextLP });
-  };
-
-  const setLoanPaidDate = (ltId, monthKey, date) => {
-    const nextLP = { ...loanPaid };
-    if (!nextLP[ltId]) nextLP[ltId] = {};
-    nextLP[ltId] = { ...nextLP[ltId] };
-    nextLP[ltId][monthKey] = { ...nextLP[ltId][monthKey], paid: true, paidDate: date };
-    save({ ...store, loanPaid: nextLP });
-  };
-
-  const toggleAllLoansPaid = (ltIds, monthKey) => {
-    const nextLP = { ...loanPaid };
-    const allPaid = ltIds.every(id => nextLP[id]?.[monthKey]?.paid);
-    ltIds.forEach(id => {
-      if (!nextLP[id]) nextLP[id] = {};
-      nextLP[id] = { ...nextLP[id] };
-      if (allPaid) delete nextLP[id][monthKey];
-      else nextLP[id][monthKey] = { paid: true, paidDate: today() };
-    });
-    save({ ...store, loanPaid: nextLP });
-  };
-
-  const getFixedIncomeForMonth = (monthKey) => {
-    let total = 0;
-    fixedIncomes.forEach(src => {
-      let applicable = null;
-      (src.records || []).forEach(r => {
-        if (r.effectiveFrom <= monthKey && (!applicable || r.effectiveFrom > applicable.effectiveFrom)) applicable = r;
-      });
-      if (applicable) total += applicable.amount;
-    });
-    return total;
-  };
-
-  const getVarIncomeForMonth = (monthKey) =>
-    variableIncomes.filter(v => v.month === monthKey).reduce((s, v) => s + v.amount, 0);
-
-  const getTotalExpensesForMonth = (monthKey) =>
-    getPaidExpForMonth(monthKey) + getAnticipatedExpForMonth(monthKey);
-
-  /* Paid = expenses whose paidDate falls in this month (regardless of entry month) */
-  const getPaidExpForMonth = (monthKey) => {
-    let total = 0;
-    categories.forEach(c => {
-      if (c.id === "loans") {
-        loanTypes.forEach(lt => {
-          Object.entries(loanPaid[lt.id] || {}).forEach(([entryKey, pd]) => {
-            if (pd?.paid && pd.paidDate && pd.paidDate.slice(0, 7) === monthKey) {
-              total += getLoanAmountForMonth(lt, entryKey);
-            }
-          });
-        });
-      } else {
-        Object.entries(expenses?.[c.id] || {}).forEach(([, e]) => {
-          if (e?.subPaid && Object.keys(e.subPaid).length > 0) {
-            /* Per-subcategory paid */
-            Object.entries(e.subPaid).forEach(([scId, sp]) => {
-              if (sp?.paid && sp.paidDate && sp.paidDate.slice(0, 7) === monthKey) {
-                total += e.subAmounts?.[scId] || 0;
-              }
-            });
-          } else if (e?.paid && e.paidDate && e.paidDate.slice(0, 7) === monthKey) {
-            total += e.amount || 0;
-          }
-        });
-      }
-    });
-    return total;
-  };
-
-  /* Anticipated = unpaid expenses sitting in this entry month */
-  const getAnticipatedExpForMonth = (monthKey) => {
-    let total = 0;
-    categories.forEach(c => {
-      if (c.id === "loans") {
-        loanTypes.forEach(lt => {
-          const amt = getLoanAmountForMonth(lt, monthKey);
-          if (amt > 0 && !loanPaid[lt.id]?.[monthKey]?.paid) total += amt;
-        });
-      } else {
-        const e = expenses?.[c.id]?.[monthKey];
-        if (!e) return;
-        if (e.subPaid && Object.keys(e.subPaid).length > 0) {
-          /* Per-subcategory: sum unpaid subcategories */
-          Object.entries(e.subAmounts || {}).forEach(([scId, amt]) => {
-            if (!e.subPaid[scId]?.paid) total += amt;
-          });
-        } else if (!e.paid) {
-          total += e.amount || 0;
-        }
-      }
-    });
-    return total;
-  };
-
-  /* Per-category paid in a month (by paidDate) — for Budget tab breakdowns */
-  const getCatPaidForMonth = (catId, monthKey) => {
-    if (catId === "loans") {
-      let total = 0;
-      loanTypes.forEach(lt => {
-        Object.entries(loanPaid[lt.id] || {}).forEach(([entryKey, pd]) => {
-          if (pd?.paid && pd.paidDate && pd.paidDate.slice(0, 7) === monthKey) {
-            total += getLoanAmountForMonth(lt, entryKey);
-          }
-        });
-      });
-      return total;
-    }
-    let total = 0;
-    Object.entries(expenses?.[catId] || {}).forEach(([, e]) => {
-      if (e?.subPaid && Object.keys(e.subPaid).length > 0) {
-        Object.entries(e.subPaid).forEach(([scId, sp]) => {
-          if (sp?.paid && sp.paidDate && sp.paidDate.slice(0, 7) === monthKey) {
-            total += e.subAmounts?.[scId] || 0;
-          }
-        });
-      } else if (e?.paid && e.paidDate && e.paidDate.slice(0, 7) === monthKey) {
-        total += e.amount || 0;
-      }
-    });
-    return total;
-  };
-
-  const catMaxYear = CY + (cat?.maxYears || 5);
-
-  /* Compute most common payment day per category for date picker suggestion */
-  const getSuggestedDay = (catId) => {
-    const days = {};
-    Object.entries(expenses?.[catId] || {}).forEach(([, e]) => {
-      if (e?.subPaid && Object.keys(e.subPaid).length > 0) {
-        Object.values(e.subPaid).forEach(sp => {
-          if (sp?.paid && sp.paidDate) { const d = +sp.paidDate.split("-")[2]; days[d] = (days[d]||0) + 1; }
-        });
-      } else if (e?.paid && e.paidDate) {
-        const d = +e.paidDate.split("-")[2]; days[d] = (days[d]||0) + 1;
-      }
-    });
-    let best = 0, bestCount = 0;
-    Object.entries(days).forEach(([d, c]) => { if (c > bestCount) { best = +d; bestCount = c; } });
-    return bestCount >= 2 ? best : 0;
-  };
+  const catMaxYear = getCY() + (cat?.maxYears || 5);
 
   return (
     <div className={dark ? "theme-dark" : "theme-light"} style={S.root}>
@@ -591,7 +251,7 @@ export default function BudgetApp() {
 
         {/* ═══ DASHBOARD TAB ═══ */}
         {tab === "dashboard" && (() => {
-          const curKey = mk(CY, CM);
+          const curKey = mk(getCY(), getCM());
           const curIncome = getFixedIncomeForMonth(curKey) + getVarIncomeForMonth(curKey);
           const curPaid = getPaidExpForMonth(curKey);
           const curAnticipated = getAnticipatedExpForMonth(curKey);
@@ -600,7 +260,7 @@ export default function BudgetApp() {
           /* Last 6 months data for mini chart */
           const miniData = [];
           for (let i = 5; i >= 0; i--) {
-            let mm = CM - i, yy = CY;
+            let mm = getCM() - i, yy = getCY();
             while (mm < 0) { mm += 12; yy--; }
             const k = mk(yy, mm);
             const inc = getFixedIncomeForMonth(k) + getVarIncomeForMonth(k);
@@ -611,7 +271,7 @@ export default function BudgetApp() {
           /* Upcoming unpaid expenses (this month + next 3) */
           const upcoming = [];
           for (let i = 0; i < 4; i++) {
-            let mm = CM + i, yy = CY;
+            let mm = getCM() + i, yy = getCY();
             while (mm > 11) { mm -= 12; yy++; }
             const k = mk(yy, mm);
             categories.forEach(c => {
@@ -668,7 +328,7 @@ export default function BudgetApp() {
 
           return (
             <div style={{animation:"fadeIn .35s"}}>
-              <h2 style={{...S.sectionTitle,marginBottom:22}}>{MONTHS[CM]} {CY} Overview</h2>
+              <h2 style={{...S.sectionTitle,marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
 
               {/* Summary cards */}
               <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14,marginBottom:28}}>
@@ -765,10 +425,10 @@ export default function BudgetApp() {
                     onDragEnd={e=>{setDragIdx(null);e.currentTarget.classList.remove("dragging");}}
                     onDragOver={e=>{e.preventDefault();e.currentTarget.classList.add("drag-over");}}
                     onDragLeave={e=>e.currentTarget.classList.remove("drag-over")}
-                    onDrop={e=>{e.preventDefault();e.currentTarget.classList.remove("drag-over");if(dragIdx!==null&&dragIdx!==i)reorderCategories(dragIdx,i);setDragIdx(null);}}
+                    onDrop={e=>{e.preventDefault();e.currentTarget.classList.remove("drag-over");if(dragIdx!==null&&dragIdx!==i){reorderCategories(dragIdx,i);if(catIdx===dragIdx)setCatIdx(i);else if(dragIdx<catIdx&&i>=catIdx)setCatIdx(catIdx-1);else if(dragIdx>catIdx&&i<=catIdx)setCatIdx(catIdx+1);}setDragIdx(null);}}
                     style={{...S.catSideItem,...(catIdx === i ? S.catSideItemActive : {}),justifyContent:"space-between"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0,cursor:"pointer"}}
-                      onClick={() => { setCatIdx(i); setExpYear(CY); setExpSel(new Set()); }}>
+                      onClick={() => { setCatIdx(i); setExpYear(getCY()); setExpSel(new Set()); }}>
                       <span style={{fontSize:11,color:catIdx===i?"rgba(255,255,255,.5)":"var(--faint)",cursor:"grab"}}>⠿</span>
                       <span style={{flex:1,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</span>
                       {c.maxYears > 5 && <span style={{...S.loanBadgeSide,...(catIdx===i?{background:"rgba(255,255,255,.2)",color:"#fff"}:{})}} >long-term</span>}
@@ -803,9 +463,9 @@ export default function BudgetApp() {
               ) : cat ? (
                 <>
                   <div style={S.yearNav}>
-                    <button onClick={() => { if(expYear > MIN_YEAR) { setExpYear(y=>y-1); setExpSel(new Set()); }}} className="year-btn-h" style={{...S.yearBtn,opacity:expYear>MIN_YEAR?1:.3}}>◂</button>
+                    <button onClick={() => { if(expYear > MIN_YEAR) { setExpYear(expYear - 1); setExpSel(new Set()); }}} className="year-btn-h" style={{...S.yearBtn,opacity:expYear>MIN_YEAR?1:.3}}>◂</button>
                     <span style={S.yearLabel}>{expYear}</span>
-                    <button onClick={() => { if(expYear < catMaxYear-1) { setExpYear(y=>y+1); setExpSel(new Set()); }}} className="year-btn-h" style={{...S.yearBtn,opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
+                    <button onClick={() => { if(expYear < catMaxYear-1) { setExpYear(expYear + 1); setExpSel(new Set()); }}} className="year-btn-h" style={{...S.yearBtn,opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
                     <span style={S.yearRange}>range: {MIN_YEAR} – {catMaxYear - 1}</span>
                   </div>
 
@@ -915,7 +575,7 @@ export default function BudgetApp() {
                         <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"var(--accent-bg)",borderRadius:10,marginBottom:10}}>
                           <span style={{fontSize:13,fontWeight:600,color:"var(--accent)",flex:1}}>{expSel.size} selected</span>
                           <button onClick={()=>setExpSel(new Set())} style={S.btnSmall}>Deselect</button>
-                          <button onClick={()=>bulkDelExp(cat.id,[...expSel])}
+                          <button onClick={()=>{bulkDelExp(cat.id,[...expSel]);setExpSel(new Set());flash(`Deleted ${expSel.size} entr${expSel.size===1?"y":"ies"}!`);}}
                             style={{...S.btnSmall,color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
                         </div>
                       )}
@@ -947,8 +607,8 @@ export default function BudgetApp() {
                           const key = mk(expYear, mi);
                           const entry = expenses?.[cat.id]?.[key] || null;
                           const hasData = hasSubs ? (entry && ((cat.subcategories||[]).some(sc=>entry.subAmounts?.[sc.id]>0)||entry.amount>0)) : !!entry;
-                          const isPast = expYear < CY || (expYear === CY && mi < CM);
-                          const isCurrent = expYear === CY && mi === CM;
+                          const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
+                          const isCurrent = expYear === getCY() && mi === getCM();
                           const isSel = expSel.has(key);
                           return (
                             <div key={mi} className="hov stagger-row"
@@ -1022,7 +682,7 @@ export default function BudgetApp() {
                 <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {fixedIncomes.map((src, si) => {
                     const sorted = [...(src.records||[])].sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom));
-                    const current = sorted.filter(r=>r.effectiveFrom<=mk(CY,CM)).pop();
+                    const current = sorted.filter(r=>r.effectiveFrom<=mk(getCY(),getCM())).pop();
                     return (
                       <div key={src.id} className="stagger-card card-h" style={{...S.incomeCard,animationDelay:`${si*80}ms`,transition:"border-color .2s, box-shadow .2s"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -1037,14 +697,14 @@ export default function BudgetApp() {
                           </div>
                           <div style={{display:"flex",gap:6}}>
                             <button onClick={()=>setModal({type:"editFixedIncome",idx:si,src})} style={S.btnSmall}>Edit</button>
-                            <button onClick={()=>{save({...store,fixedIncomes:fixedIncomes.filter((_,i)=>i!==si)});flash("Deleted!");}} style={{...S.btnSmall,color:"var(--red)",borderColor:"var(--red)"}}>Delete</button>
+                            <button onClick={()=>{deleteFixedIncome(si);flash("Deleted!");}} style={{...S.btnSmall,color:"var(--red)",borderColor:"var(--red)"}}>Delete</button>
                           </div>
                         </div>
                         {sorted.length > 0 && (
                           <div style={{marginTop:12,display:"flex",flexWrap:"wrap",gap:6}}>
                             {sorted.map((r,ri)=>{
                               const {y,m}=parseMk(r.effectiveFrom);
-                              const isUpcoming = r.effectiveFrom > mk(CY,CM);
+                              const isUpcoming = r.effectiveFrom > mk(getCY(),getCM());
                               return (
                                 <span key={ri} style={{...S.timeChip,...(isUpcoming?{background:"var(--upcoming-bg)",color:"var(--amber)",border:"1px solid var(--upcoming-border)"}:{})}}>
                                   {fmt(r.amount)} from {MONTHS[m]} {y}{isUpcoming?" ⏳":""}
@@ -1081,7 +741,7 @@ export default function BudgetApp() {
                     <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"var(--accent-bg)",borderRadius:10,marginBottom:10}}>
                       <span style={{fontSize:13,fontWeight:600,color:"var(--accent)",flex:1}}>{varSel.size} selected</span>
                       <button onClick={()=>setVarSel(new Set())} style={S.btnSmall}>Deselect</button>
-                      <button onClick={()=>bulkDelVarInc(varSel)}
+                      <button onClick={()=>{bulkDelVarInc(varSel);setVarSel(new Set());flash(`Deleted ${varSel.size} entr${varSel.size===1?"y":"ies"}!`);}}
                         style={{...S.btnSmall,color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
                     </div>
                   )}
@@ -1144,10 +804,10 @@ export default function BudgetApp() {
           <div onClick={e=>e.stopPropagation()} className="modal-mobile" style={{animation:"slideUp .25s"}}>
             {modal.type==="editExp" && (
               <ExpenseModal catObj={modal.catObj} monthKey={modal.monthKey} monthLabel={modal.monthLabel}
-                entry={modal.entry} catMaxYear={CY+(modal.catObj.maxYears||5)}
+                entry={modal.entry} catMaxYear={getCY()+(modal.catObj.maxYears||5)}
                 suggestedDay={getSuggestedDay(modal.catId)}
-                onSave={(entry,applyMonths)=>{setExp(modal.catId,modal.monthKey,entry,applyMonths);setModal(null);}}
-                onDelete={()=>{delExp(modal.catId,modal.monthKey);setModal(null);}}
+                onSave={(entry,applyMonths)=>{setExp(modal.catId,modal.monthKey,entry,applyMonths);flash(applyMonths>0?`Applied to ${applyMonths} more month${applyMonths!==1?"s":""}!`:"Saved!");setModal(null);}}
+                onDelete={()=>{delExp(modal.catId,modal.monthKey);flash("Deleted!");setModal(null);}}
                 onReorderSubs={(newSubs)=>{
                   const ci = categories.findIndex(c=>c.id===modal.catId);
                   if(ci>=0) updateCategory(ci,{subcategories:newSubs},true);
@@ -1161,6 +821,8 @@ export default function BudgetApp() {
                 onSave={(catData)=>{
                   if(modal.type==="addCat") {
                     addCategory(catData);
+                    setCatIdx(categories.length); // new category will be at end
+                    flash("Category added!");
                   } else {
                     /* Detect removed subcategory IDs */
                     const oldSubIds = new Set((modal.cat.subcategories||[]).map(s=>s.id));
@@ -1169,7 +831,7 @@ export default function BudgetApp() {
                     if (removedIds.length > 0) {
                       /* Scrub deleted-subcategory data from every expense entry */
                       const catId = modal.cat.id;
-                      const nextExp = { ...store.expenses };
+                      const nextExp = { ...appData.expenses };
                       if (nextExp[catId]) {
                         const cleanedEntries = {};
                         Object.entries(nextExp[catId]).forEach(([key, entry]) => {
@@ -1186,11 +848,12 @@ export default function BudgetApp() {
                         });
                         nextExp[catId] = cleanedEntries;
                       }
-                      const nextCats = store.categories.map((c,i)=>i===modal.idx?{...c,...catData}:c);
-                      save({ ...store, categories:nextCats, expenses:nextExp });
+                      const nextCats = appData.categories.map((c,i)=>i===modal.idx?{...c,...catData}:c);
+                      useBudgetStore.getState()._save({ ...appData, categories:nextCats, expenses:nextExp });
                       flash("Category updated!");
                     } else {
                       updateCategory(modal.idx, catData);
+                      flash("Category updated!");
                     }
                   }
                   setModal(null);
@@ -1205,23 +868,23 @@ export default function BudgetApp() {
                 </p>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>setModal(null)} style={S.btnGhostModal}>Cancel</button>
-                  <button onClick={()=>{deleteCategoryFn(modal.idx);setModal(null);}} className="btn-hover" style={{...S.btnPrimary,flex:1,background:"var(--red)"}}>Delete</button>
+                  <button onClick={()=>{deleteCategory(modal.idx);if(catIdx>=categories.length-1)setCatIdx(Math.max(0,categories.length-2));flash("Category deleted!");setModal(null);}} className="btn-hover" style={{...S.btnPrimary,flex:1,background:"var(--red)"}}>Delete</button>
                 </div>
               </div>
             )}
             {(modal.type==="addFixedIncome"||modal.type==="editFixedIncome") && (
               <FixedIncomeModal src={modal.src||null}
                 onSave={(src)=>{
-                  if(modal.type==="addFixedIncome") save({...store,fixedIncomes:[...fixedIncomes,{...src,id:uid()}]});
-                  else save({...store,fixedIncomes:fixedIncomes.map((s,i)=>i===modal.idx?{...s,...src}:s)});
+                  if(modal.type==="addFixedIncome") addFixedIncome(src);
+                  else updateFixedIncome(modal.idx, src);
                   flash("Saved!");setModal(null);
                 }} onClose={()=>setModal(null)} />
             )}
             {(modal.type==="addVarIncome"||modal.type==="editVarIncome") && (
               <VarIncomeModal item={modal.item||null}
                 onSave={(item)=>{
-                  if(modal.type==="addVarIncome") save({...store,variableIncomes:[...variableIncomes,{...item,id:uid()}]});
-                  else save({...store,variableIncomes:variableIncomes.map(v=>v.id===modal.item.id?{...v,...item}:v)});
+                  if(modal.type==="addVarIncome") addVarIncome(item);
+                  else updateVarIncome(variableIncomes.findIndex(v=>v.id===modal.item.id), item);
                   flash("Saved!");setModal(null);
                 }} onClose={()=>setModal(null)} />
             )}
@@ -1578,11 +1241,11 @@ function CategoryFormModal({ editing, category, onSave, onClose }) {
 /* ═══════════ FIXED INCOME MODAL ═══════════ */
 function FixedIncomeModal({ src, onSave, onClose }) {
   const [name, setName] = useState(src?.name || "");
-  const [records, setRecords] = useState(src?.records ? src.records.map(r=>({...r})) : [{ amount: "", effectiveFrom: mk(CY, CM) }]);
-  const addRecord = () => setRecords(p => [...p, { amount: "", effectiveFrom: mk(CY, CM) }]);
+  const [records, setRecords] = useState(src?.records ? src.records.map(r=>({...r})) : [{ amount: "", effectiveFrom: mk(getCY(), getCM()) }]);
+  const addRecord = () => setRecords(p => [...p, { amount: "", effectiveFrom: mk(getCY(), getCM()) }]);
   const updateRec = (i, key, val) => setRecords(p => p.map((r, ri) => ri === i ? { ...r, [key]: val } : r));
   const removeRec = (i) => setRecords(p => p.filter((_, ri) => ri !== i));
-  const years = Array.from({length:CY-MIN_YEAR+11},(_,i)=>MIN_YEAR+i);
+  const years = Array.from({length:getCY()-MIN_YEAR+11},(_,i)=>MIN_YEAR+i);
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -1631,11 +1294,11 @@ function FixedIncomeModal({ src, onSave, onClose }) {
 function VarIncomeModal({ item, onSave, onClose }) {
   const [name, setName] = useState(item?.name || "");
   const [amount, setAmount] = useState(item?.amount ?? "");
-  const defMonth = item?.month || mk(CY, CM);
+  const defMonth = item?.month || mk(getCY(), getCM());
   const {y:iy,m:im} = parseMk(defMonth);
   const [month, setMonth] = useState(im);
   const [year, setYear] = useState(iy);
-  const years = Array.from({length:CY-MIN_YEAR+6},(_,i)=>MIN_YEAR+i);
+  const years = Array.from({length:getCY()-MIN_YEAR+6},(_,i)=>MIN_YEAR+i);
 
   return (
     <div style={S.modalContent}>
@@ -1667,11 +1330,11 @@ function VarIncomeModal({ item, onSave, onClose }) {
 /* ═══════════ LOANS VIEW ═══════════ */
 function LoansView({ loanTypes, getLoanAmountForMonth, expYear, setExpYear, onAdd, onUpdate, onDelete, loanPaid, toggleLoanPaid, setLoanPaidDate, toggleAllLoansPaid, paidPicker, setPaidPicker }) {
   const [editLoan, setEditLoan] = useState(null); // null | { isNew, id?, name, amount, startFrom, endAt }
-  const catMaxYear = CY + 35;
-  const years = Array.from({length:CY-MIN_YEAR+36},(_,i)=>MIN_YEAR+i);
+  const catMaxYear = getCY() + 35;
+  const years = Array.from({length:getCY()-MIN_YEAR+36},(_,i)=>MIN_YEAR+i);
 
-  const openNew = () => setEditLoan({ isNew: true, name: "", loanNumber: "", amount: "", startFrom: mk(CY, CM), endAt: mk(CY + 1, CM) });
-  const openEdit = (lt) => setEditLoan({ isNew: false, id: lt.id, name: lt.name, loanNumber: lt.loanNumber || "", amount: lt.amount ?? "", startFrom: lt.startFrom || mk(CY, CM), endAt: lt.endAt || mk(CY + 1, CM) });
+  const openNew = () => setEditLoan({ isNew: true, name: "", loanNumber: "", amount: "", startFrom: mk(getCY(), getCM()), endAt: mk(getCY() + 1, getCM()) });
+  const openEdit = (lt) => setEditLoan({ isNew: false, id: lt.id, name: lt.name, loanNumber: lt.loanNumber || "", amount: lt.amount ?? "", startFrom: lt.startFrom || mk(getCY(), getCM()), endAt: lt.endAt || mk(getCY() + 1, getCM()) });
 
   const handleSave = () => {
     if (!editLoan.name.trim() || editLoan.amount === "" || isNaN(+editLoan.amount)) return;
@@ -1744,8 +1407,8 @@ function LoansView({ loanTypes, getLoanAmountForMonth, expYear, setExpYear, onAd
             </div>
             {MONTHS.map((mName, mi) => {
               const key = mk(expYear, mi);
-              const isPast = expYear < CY || (expYear === CY && mi < CM);
-              const isCurrent = expYear === CY && mi === CM;
+              const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
+              const isCurrent = expYear === getCY() && mi === getCM();
               const rowTotal = loanTypes.reduce((s, lt) => s + getLoanAmountForMonth(lt, key), 0);
               const activeLTs = loanTypes.filter(lt => getLoanAmountForMonth(lt, key) > 0);
               const paidCount = activeLTs.filter(lt => loanPaid[lt.id]?.[key]?.paid).length;
@@ -2408,7 +2071,7 @@ function DatePicker({ value, onChange, onBlur, autoFocus, style, monthKey, sugge
   const [calMonth, setCalMonth] = useState(() => {
     if (value) { const [y,m] = value.split("-"); return { y:+y, m:+m-1 }; }
     if (monthKey) { const p = parseMk(monthKey); return { y:p.y, m:p.m }; }
-    return { y:CY, m:CM };
+    return { y:getCY(), m:getCM() };
   });
   const wrapRef = useRef(null);
   const panelRef = useRef(null);

@@ -274,6 +274,13 @@ const useBudgetStore = create(
       _save(next);
     },
 
+    bulkDelVarInc: (ids) => {
+      // ids is a Set of IDs
+      const { appData, _save } = get();
+      const next = { ...appData, variableIncomes: (appData.variableIncomes || []).filter(v => !ids.has(v.id)) };
+      _save(next);
+    },
+
     // ── Selectors (read from state) ──
     getLoanAmountForMonth: (lt, monthKey) =>
       (lt.startFrom && lt.endAt && monthKey >= lt.startFrom && monthKey <= lt.endAt) ? (lt.amount || 0) : 0,
