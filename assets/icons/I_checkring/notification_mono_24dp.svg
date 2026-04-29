@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Monochrome notification / status-bar icon  (24 × 24 dp) -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 24 24" width="24" height="24">
+  <circle cx="12" cy="12" r="8.5"
+          fill="none" stroke="white" stroke-width="2"/>
+  <polyline points="5.5,12 9.5,16 18.5,7"
+            fill="none" stroke="white"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512" width="512" height="512">
+  <title>Summa — Check Ring</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1C2134"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Ring  (coin · cycle · progress track) -->
+  <circle cx="256" cy="256" r="179"
+          fill="none" stroke="#68C0A4" stroke-width="42"/>
+
+  <!-- Checkmark  (task done · goal met) -->
+  <polyline points="115,256 198,339 390,141"
+            fill="none" stroke="white"
+            stroke-width="45"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+</svg>

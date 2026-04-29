@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A9E76"/>
+      <stop offset="100%" stop-color="#0A6950"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Σ mark: left bar -->
+  <rect x="57" y="57" width="74" height="398" rx="12" fill="white"/>
+  <!-- Σ mark: top chevron -->
+  <polygon points="57,57 453,57 453,166 250,266 57,172" fill="white"/>
+  <!-- Σ mark: bottom chevron -->
+  <polygon points="57,340 250,266 453,340 453,455 57,455" fill="white"/>
+</svg>
