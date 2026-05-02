@@ -172,6 +172,38 @@ const useBudgetStore = create(
       _save(next);
     },
 
+    cleanCategoryUpdate: (idx, catData, removedSubIds) => {
+      const { appData, _save } = get();
+      const catId = appData.categories[idx].id;
+      const nextExp = { ...appData.expenses };
+      if (nextExp[catId]) {
+        const cleanedEntries = {};
+        Object.entries(nextExp[catId]).forEach(([key, entry]) => {
+          if (!entry) return;
+          const newSubAmounts = { ...(entry.subAmounts || {}) };
+          const newSubPaid = { ...(entry.subPaid || {}) };
+          removedSubIds.forEach(rid => { delete newSubAmounts[rid]; delete newSubPaid[rid]; });
+          const newTotal = Object.values(newSubAmounts).reduce((s, v) => s + (v || 0), 0);
+          const subIdsLeft = Object.keys(newSubAmounts).filter(id => (newSubAmounts[id] || 0) > 0);
+          const allPaid = subIdsLeft.length > 0 && subIdsLeft.every(id => newSubPaid[id]?.paid);
+          const paidDate = allPaid
+            ? (Object.values(newSubPaid).filter(sp => sp?.paid && sp?.paidDate).map(sp => sp.paidDate).sort().pop() || '')
+            : (entry.paid && !allPaid ? '' : entry.paidDate);
+          cleanedEntries[key] = {
+            ...entry,
+            subAmounts: newSubAmounts,
+            subPaid: newSubPaid,
+            amount: newTotal,
+            paid: allPaid,
+            paidDate: allPaid ? paidDate : '',
+          };
+        });
+        nextExp[catId] = cleanedEntries;
+      }
+      const nextCats = appData.categories.map((c, i) => i === idx ? { ...c, ...catData } : c);
+      _save({ ...appData, categories: nextCats, expenses: nextExp });
+    },
+
     // ── Loan actions ──
     addLoanType: (lt) => {
       const { appData, _save } = get();

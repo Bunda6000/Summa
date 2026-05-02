@@ -69,6 +69,7 @@ export default function BudgetApp() {
   const deleteCategory = useBudgetStore(state => state.deleteCategory);
   const reorderCategories = useBudgetStore(state => state.reorderCategories);
   const updateCatColOrder = useBudgetStore(state => state.updateCatColOrder);
+  const cleanCategoryUpdate = useBudgetStore(state => state.cleanCategoryUpdate);
   const addLoanType = useBudgetStore(state => state.addLoanType);
   const updateLoanType = useBudgetStore(state => state.updateLoanType);
   const deleteLoanType = useBudgetStore(state => state.deleteLoanType);
@@ -767,7 +768,7 @@ export default function BudgetApp() {
                       return (
                         <div key={v.id} className="hov" style={{...S.tableRow,...(isSel?{background:"var(--accent-bg)"}:{})}}>
                           <span style={{width:30}} onClick={e=>e.stopPropagation()}>
-                            <span onClick={()=>setVarSel(prev=>{const n=new Set(prev);n.has(v.id)?n.delete(v.id):n.add(v.id);return n;})}
+                            <span onClick={()=>{const n=new Set(varSel);n.has(v.id)?n.delete(v.id):n.add(v.id);setVarSel(n);}}
                               style={{width:16,height:16,borderRadius:4,border:isSel?"none":"1.5px solid var(--faint)",background:isSel?"var(--accent)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
                               {isSel && <span style={{color:"#fff",fontSize:10,lineHeight:1}}>✓</span>}
                             </span>
@@ -829,27 +830,7 @@ export default function BudgetApp() {
                     const newSubIds = new Set((catData.subcategories||[]).map(s=>s.id));
                     const removedIds = [...oldSubIds].filter(id=>!newSubIds.has(id));
                     if (removedIds.length > 0) {
-                      /* Scrub deleted-subcategory data from every expense entry */
-                      const catId = modal.cat.id;
-                      const nextExp = { ...appData.expenses };
-                      if (nextExp[catId]) {
-                        const cleanedEntries = {};
-                        Object.entries(nextExp[catId]).forEach(([key, entry]) => {
-                          if (!entry) return;
-                          const newSubAmounts = { ...(entry.subAmounts||{}) };
-                          const newSubPaid    = { ...(entry.subPaid||{}) };
-                          removedIds.forEach(rid => { delete newSubAmounts[rid]; delete newSubPaid[rid]; });
-                          const newTotal = Object.values(newSubAmounts).reduce((s,v)=>s+(v||0), 0);
-                          /* Re-derive paid status from remaining subcategories */
-                          const subIdsLeft = Object.keys(newSubAmounts).filter(id=>(newSubAmounts[id]||0)>0);
-                          const allPaid = subIdsLeft.length>0 && subIdsLeft.every(id=>newSubPaid[id]?.paid);
-                          const paidDate = allPaid ? (Object.values(newSubPaid).filter(sp=>sp?.paid&&sp?.paidDate).map(sp=>sp.paidDate).sort().pop()||"") : (entry.paid&&!allPaid?"":entry.paidDate);
-                          cleanedEntries[key] = { ...entry, subAmounts:newSubAmounts, subPaid:newSubPaid, amount:newTotal, paid:allPaid, paidDate:allPaid?paidDate:"" };
-                        });
-                        nextExp[catId] = cleanedEntries;
-                      }
-                      const nextCats = appData.categories.map((c,i)=>i===modal.idx?{...c,...catData}:c);
-                      useBudgetStore.getState()._save({ ...appData, categories:nextCats, expenses:nextExp });
+                      cleanCategoryUpdate(modal.idx, catData, removedIds);
                       flash("Category updated!");
                     } else {
                       updateCategory(modal.idx, catData);
@@ -1362,9 +1343,9 @@ function LoansView({ loanTypes, getLoanAmountForMonth, expYear, setExpYear, onAd
   return (
     <div>
       <div style={S.yearNav}>
-        <button onClick={() => expYear > MIN_YEAR && setExpYear(y=>y-1)} className="year-btn-h" style={{...S.yearBtn,opacity:expYear>MIN_YEAR?1:.3}}>◂</button>
+        <button onClick={() => expYear > MIN_YEAR && setExpYear(expYear-1)} className="year-btn-h" style={{...S.yearBtn,opacity:expYear>MIN_YEAR?1:.3}}>◂</button>
         <span style={S.yearLabel}>{expYear}</span>
-        <button onClick={() => expYear < catMaxYear-1 && setExpYear(y=>y+1)} className="year-btn-h" style={{...S.yearBtn,opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
+        <button onClick={() => expYear < catMaxYear-1 && setExpYear(expYear+1)} className="year-btn-h" style={{...S.yearBtn,opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
         <span style={S.yearRange}>range: {MIN_YEAR} – {catMaxYear - 1}</span>
       </div>
 
