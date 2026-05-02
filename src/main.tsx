@@ -1,14 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './index.css';
 import BudgetApp from './App';
 import useBudgetStore from './store/useBudgetStore';
 
-// Subscribe to dark state changes and sync <html> theme classes
+// Subscribe to dark state changes and sync <html> data-theme attribute
 useBudgetStore.subscribe(
   (state) => state.dark,
   (dark: boolean) => {
-    document.documentElement.classList.toggle('theme-dark', dark);
-    document.documentElement.classList.toggle('theme-light', !dark);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   }
   // Note: fireImmediately is NOT needed here — initStore() handles the initial sync
 );

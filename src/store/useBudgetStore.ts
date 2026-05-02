@@ -108,9 +108,8 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
       }
       saveStore('budget-app-v2', loaded);
       set({ appData: loaded, dark: storedDark, initialized: true });
-      // Sync initial theme classes (one-time side-effect; subscriber wired in Phase 1c)
-      document.documentElement.classList.toggle('theme-dark', storedDark);
-      document.documentElement.classList.toggle('theme-light', !storedDark);
+      // Sync initial data-theme attribute (one-time side-effect; subscriber wired in Phase 1c)
+      document.documentElement.dataset.theme = storedDark ? 'dark' : 'light';
     } catch (e) {
       console.error('[useBudgetStore] initStore failed:', e);
       set({ _initializing: false }); // allow retry
