@@ -97,8 +97,10 @@ export default function BudgetApp() {
   const getSuggestedDay = useBudgetStore(state => state.getSuggestedDay);
 
   // UI state
-  const { tab, catIdx, expYear, budgetYear, modal, toast, paidPicker, expSel, varSel, dragIdx, introDone } = useUIStore();
-  const { setTab, setCatIdx, setExpYear, setBudgetYear, setModal, setPaidPicker, setExpSel, setVarSel, setDragIdx, setIntroDone, flash } = useUIStore();
+  const {
+    tab, catIdx, expYear, budgetYear, modal, toast, paidPicker, expSel, varSel, dragIdx, introDone,
+    setTab, setCatIdx, setExpYear, setBudgetYear, setModal, setPaidPicker, setExpSel, setVarSel, setDragIdx, setIntroDone, flash
+  } = useUIStore();
 
   // Destructure appData for convenient access (guard against null)
   const { categories = [], expenses = {}, fixedIncomes = [], variableIncomes = [], loanTypes = [], loanPaid = {} } = appData || {};

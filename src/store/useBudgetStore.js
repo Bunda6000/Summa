@@ -17,35 +17,41 @@ const useBudgetStore = create(
     initStore: async () => {
       if (get().initialized || get()._initializing) return;
       set({ _initializing: true });
-      const [storedDark, loaded] = await Promise.all([
-        loadStore('budget-dark-mode', false),
-        loadStore('budget-app-v2', defaultData()),
-      ]);
-      if (loaded._schemaVersion >= 2) {
-        // already migrated — skip
-      } else {
-        // Migration: ensure protected Loans category exists
-        const hasLoans = loaded.categories?.some(c => c.id === 'loans');
-        if (!hasLoans) {
-          loaded.categories = [...(loaded.categories || []), { id: 'loans', name: 'Loans', maxYears: 35, protected: true, fields: [] }];
+      try {
+        const [storedDark, loaded] = await Promise.all([
+          loadStore('budget-dark-mode', false),
+          loadStore('budget-app-v2', defaultData()),
+        ]);
+        if (loaded._schemaVersion >= 2) {
+          // already migrated — skip
         } else {
-          loaded.categories = loaded.categories.map(c =>
-            c.id === 'loans' ? { ...c, protected: true, fields: [] } : c
-          );
+          // Migration: ensure protected Loans category exists
+          const hasLoans = loaded.categories?.some(c => c.id === 'loans');
+          if (!hasLoans) {
+            loaded.categories = [...(loaded.categories || []), { id: 'loans', name: 'Loans', maxYears: 35, protected: true, fields: [] }];
+          } else {
+            loaded.categories = loaded.categories.map(c =>
+              c.id === 'loans' ? { ...c, protected: true, fields: [] } : c
+            );
+          }
+          if (!loaded.loanTypes) loaded.loanTypes = [];
+          if (!loaded.loanPaid) loaded.loanPaid = {};
+          // Migration: ensure all categories have subcategories + colOrder arrays
+          loaded.categories = loaded.categories.map(c => ({
+            ...c, subcategories: c.subcategories || [], colOrder: c.colOrder || []
+          }));
+          loaded._schemaVersion = 2;
         }
-        if (!loaded.loanTypes) loaded.loanTypes = [];
-        if (!loaded.loanPaid) loaded.loanPaid = {};
-        // Migration: ensure all categories have subcategories + colOrder arrays
-        loaded.categories = loaded.categories.map(c => ({
-          ...c, subcategories: c.subcategories || [], colOrder: c.colOrder || []
-        }));
-        loaded._schemaVersion = 2;
+        saveStore('budget-app-v2', loaded);
+        set({ appData: loaded, dark: storedDark, initialized: true });
+        // Sync initial theme classes (one-time side-effect; subscriber wired in Phase 1c)
+        document.documentElement.classList.toggle('theme-dark', storedDark);
+        document.documentElement.classList.toggle('theme-light', !storedDark);
+      } catch (e) {
+        console.error('[useBudgetStore] initStore failed:', e);
+        set({ _initializing: false }); // allow retry
+        throw e;
       }
-      saveStore('budget-app-v2', loaded);
-      set({ appData: loaded, dark: storedDark, initialized: true });
-      // Sync initial theme classes (one-time side-effect; subscriber wired in Phase 1c)
-      document.documentElement.classList.toggle('theme-dark', storedDark);
-      document.documentElement.classList.toggle('theme-light', !storedDark);
     },
 
     // ── Persistence helper ──
@@ -186,16 +192,20 @@ const useBudgetStore = create(
           const newTotal = Object.values(newSubAmounts).reduce((s, v) => s + (v || 0), 0);
           const subIdsLeft = Object.keys(newSubAmounts).filter(id => (newSubAmounts[id] || 0) > 0);
           const allPaid = subIdsLeft.length > 0 && subIdsLeft.every(id => newSubPaid[id]?.paid);
-          const paidDate = allPaid
-            ? (Object.values(newSubPaid).filter(sp => sp?.paid && sp?.paidDate).map(sp => sp.paidDate).sort().pop() || '')
-            : (entry.paid && !allPaid ? '' : entry.paidDate);
+          const hadSubModel = Object.keys(entry.subAmounts || {}).length > 0;
+          const newPaid = hadSubModel ? allPaid : entry.paid;
+          const newPaidDate = hadSubModel
+            ? (allPaid
+              ? (Object.values(newSubPaid).filter(sp => sp?.paid && sp?.paidDate).map(sp => sp.paidDate).sort().pop() || '')
+              : '')
+            : entry.paidDate;
           cleanedEntries[key] = {
             ...entry,
             subAmounts: newSubAmounts,
             subPaid: newSubPaid,
             amount: newTotal,
-            paid: allPaid,
-            paidDate: allPaid ? paidDate : '',
+            paid: newPaid,
+            paidDate: newPaid ? newPaidDate : '',
           };
         });
         nextExp[catId] = cleanedEntries;
