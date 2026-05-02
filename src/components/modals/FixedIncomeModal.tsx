@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MONTHS, getCY, getCM, mk, parseMk, MIN_YEAR } from '../../utils/dates';
-import S from '../../styles/shared';
+import styles from './FixedIncomeModal.module.css';
 import type { FixedIncome, IncomeRecord } from '../../types';
 
 interface FixedIncomeModalProps {
@@ -34,13 +34,13 @@ export default function FixedIncomeModal({ src, onSave, onClose }: FixedIncomeMo
   };
 
   return (
-    <div style={S.modalContent}>
-      <h2 style={S.modalTitle}>{src ? "Edit" : "Add"} Fixed Income</h2>
-      <label style={S.label}>Income Source Name *</label>
+    <div className={styles.modalContent}>
+      <h2 className={styles.modalTitle}>{src ? "Edit" : "Add"} Fixed Income</h2>
+      <label className={styles.label}>Income Source Name *</label>
       <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Salary" style={{ width: "100%", marginBottom: 16 }} autoFocus />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <label style={{ ...S.label, marginBottom: 0 }}>Amount Records</label>
-        <button onClick={addRecord} style={{ ...S.btnSmall, fontSize: 12 }}>+ Add Change</button>
+        <label className={styles.label} style={{ marginBottom: 0 }}>Amount Records</label>
+        <button onClick={addRecord} className={styles.btnSmall} style={{ fontSize: 12 }}>+ Add Change</button>
       </div>
       <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Add multiple records to schedule raises. Each takes effect from the month you choose.</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -62,8 +62,8 @@ export default function FixedIncomeModal({ src, onSave, onClose }: FixedIncomeMo
         })}
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-        <button onClick={onClose} style={S.btnGhostModal}>Cancel</button>
-        <button onClick={handleSave} className="btn-hover" style={{ ...S.btnPrimary, flex: 1 }}>Save</button>
+        <button onClick={onClose} className={styles.btnGhostModal}>Cancel</button>
+        <button onClick={handleSave} className={`btn-hover ${styles.btnPrimary}`} style={{ flex: 1 }}>Save</button>
       </div>
     </div>
   );

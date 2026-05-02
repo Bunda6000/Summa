@@ -2,7 +2,7 @@ import { useState } from 'react';
 import DatePicker from '../DatePicker';
 import { today, fmtDate, mk, parseMk, MONTHS, getCY, getCM, MIN_YEAR } from '../../utils/dates';
 import { fmt } from '../../utils/formatters';
-import S from '../../styles/shared';
+import styles from './LoansView.module.css';
 import type { LoanType, LoanPaid } from '../../types';
 import type { PaidPickerState } from '../../store/useUIStore';
 
@@ -66,18 +66,18 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
 
   return (
     <div>
-      <div style={S.yearNav}>
-        <button onClick={() => expYear > MIN_YEAR && setExpYear(expYear - 1)} className="year-btn-h" style={{ ...S.yearBtn, opacity: expYear > MIN_YEAR ? 1 : .3 }}>◂</button>
-        <span style={S.yearLabel}>{expYear}</span>
-        <button onClick={() => expYear < catMaxYear - 1 && setExpYear(expYear + 1)} className="year-btn-h" style={{ ...S.yearBtn, opacity: expYear < catMaxYear - 1 ? 1 : .3 }}>▸</button>
-        <span style={S.yearRange}>range: {MIN_YEAR} – {catMaxYear - 1}</span>
+      <div className={styles.yearNav}>
+        <button onClick={() => expYear > MIN_YEAR && setExpYear(expYear - 1)} className={`year-btn-h ${styles.yearBtn}`} style={{ opacity: expYear > MIN_YEAR ? 1 : .3 }}>◂</button>
+        <span className={styles.yearLabel}>{expYear}</span>
+        <button onClick={() => expYear < catMaxYear - 1 && setExpYear(expYear + 1)} className={`year-btn-h ${styles.yearBtn}`} style={{ opacity: expYear < catMaxYear - 1 ? 1 : .3 }}>▸</button>
+        <span className={styles.yearRange}>range: {MIN_YEAR} – {catMaxYear - 1}</span>
       </div>
 
       {/* Loan types cards */}
       <div style={{ background: "var(--card)", borderRadius: 14, border: "1.5px solid var(--border)", padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .8 }}>Your Loans</span>
-          <button onClick={openNew} className="btn-hover" style={{ ...S.btnPrimary, fontSize: 12, padding: "7px 14px" }}>+ Add Loan</button>
+          <button onClick={openNew} className={`btn-hover ${styles.btnPrimary}`} style={{ fontSize: 12, padding: "7px 14px" }}>+ Add Loan</button>
         </div>
         {loanTypes.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--faintest)", fontStyle: "italic", textAlign: "center", padding: "12px 0" }}>No loans added yet. Click "+ Add Loan" to get started.</p>
@@ -101,8 +101,8 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
       {/* Monthly view */}
       {loanTypes.length > 0 && (
         <>
-          <div style={{ ...S.listWrap, overflowX: "auto" }}>
-            <div style={{ ...S.listHeader, minWidth: 80 + loanTypes.length * 120 + 90 + 170 }}>
+          <div className={styles.listWrap} style={{ overflowX: "auto" }}>
+            <div className={styles.listHeader} style={{ minWidth: 80 + loanTypes.length * 120 + 90 + 170 }}>
               <span style={{ width: 80 }}>Month</span>
               {loanTypes.map(lt => (
                 <span key={lt.id} style={{ width: 120, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lt.name}</span>
@@ -120,10 +120,10 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
               const allPaid = activeLTs.length > 0 && paidCount === activeLTs.length;
               const anyPaidDate = activeLTs.map(lt => loanPaid[lt.id]?.[key]?.paidDate).find(d => d);
               return (
-                <div key={mi} style={{ ...S.listRow, ...(isCurrent ? S.listRowCurrent : {}), ...(isPast ? { opacity: .5 } : {}), minWidth: 80 + loanTypes.length * 120 + 90 + 170 }}>
+                <div key={mi} className={`${styles.listRow} ${isCurrent ? styles.listRowCurrent : ''}`} style={{ ...(isPast ? { opacity: .5 } : {}), minWidth: 80 + loanTypes.length * 120 + 90 + 170 }}>
                   <span style={{ width: 80, fontWeight: 600, fontSize: 13, color: "var(--text2)", display: "flex", alignItems: "center", gap: 6 }}>
                     {mName}
-                    {isCurrent && <span style={S.nowBadge}>now</span>}
+                    {isCurrent && <span className={styles.nowBadge}>now</span>}
                   </span>
                   {loanTypes.map(lt => {
                     const val = getLoanAmountForMonth(lt, key);
@@ -174,7 +174,7 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
               );
             })}
           </div>
-          <div style={S.yearTotal}>
+          <div className={styles.yearTotal}>
             <span style={{ color: "var(--muted)" }}>Total for {expYear}:</span>
             <span style={{ fontWeight: 600, fontSize: 18, color: "var(--text)" }}>{fmt(yearTotal)}</span>
           </div>
@@ -183,21 +183,21 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
 
       {/* Add / Edit Loan Modal */}
       {editLoan && (
-        <div onClick={() => setEditLoan(null)} className="overlay-mobile" style={S.overlay}>
+        <div onClick={() => setEditLoan(null)} className={`overlay-mobile ${styles.overlay}`}>
           <div onClick={e => e.stopPropagation()} className="modal-mobile" style={{ animation: "slideUp .25s" }}>
-            <div style={S.modalContent}>
-              <h2 style={S.modalTitle}>{editLoan.isNew ? "Add" : "Edit"} Loan</h2>
+            <div className={styles.modalContent}>
+              <h2 className={styles.modalTitle}>{editLoan.isNew ? "Add" : "Edit"} Loan</h2>
 
-              <label style={S.label}>Loan Name *</label>
+              <label className={styles.label}>Loan Name *</label>
               <input value={editLoan.name} onChange={e => setField("name", e.target.value)} placeholder="e.g. Car Loan" style={{ width: "100%", marginBottom: 14 }} autoFocus />
 
-              <label style={S.label}>Loan Number</label>
+              <label className={styles.label}>Loan Number</label>
               <input value={editLoan.loanNumber} onChange={e => setField("loanNumber", e.target.value)} placeholder="e.g. LN-2026-00421" style={{ width: "100%", marginBottom: 14 }} />
 
-              <label style={S.label}>Monthly Amount *</label>
+              <label className={styles.label}>Monthly Amount *</label>
               <input type="number" value={editLoan.amount} onChange={e => setField("amount", e.target.value)} placeholder="0.00" style={{ width: "100%", marginBottom: 14 }} />
 
-              <label style={S.label}>Start Date</label>
+              <label className={styles.label}>Start Date</label>
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <select value={parseMk(editLoan.startFrom).m} onChange={e => setField("startFrom", mk(parseMk(editLoan.startFrom).y, +e.target.value))} style={{ flex: 1 }}>
                   {MONTHS.map((mn, mi) => <option key={mi} value={mi}>{mn}</option>)}
@@ -207,7 +207,7 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
                 </select>
               </div>
 
-              <label style={S.label}>End Date</label>
+              <label className={styles.label}>End Date</label>
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <select value={parseMk(editLoan.endAt).m} onChange={e => setField("endAt", mk(parseMk(editLoan.endAt).y, +e.target.value))} style={{ flex: 1 }}>
                   {MONTHS.map((mn, mi) => <option key={mi} value={mi}>{mn}</option>)}
@@ -222,11 +222,11 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
               )}
 
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button onClick={() => setEditLoan(null)} style={S.btnGhostModal}>Cancel</button>
-                <button onClick={handleSave} className="btn-hover" style={{ ...S.btnPrimary, flex: 1 }}>Save</button>
+                <button onClick={() => setEditLoan(null)} className={styles.btnGhostModal}>Cancel</button>
+                <button onClick={handleSave} className={`btn-hover ${styles.btnPrimary}`} style={{ flex: 1 }}>Save</button>
               </div>
               {!editLoan.isNew && (
-                <button onClick={() => { if (editLoan.id) onDelete(editLoan.id); setEditLoan(null); }} style={S.deleteLink}>Delete this loan</button>
+                <button onClick={() => { if (editLoan.id) onDelete(editLoan.id); setEditLoan(null); }} className={styles.deleteLink}>Delete this loan</button>
               )}
             </div>
           </div>

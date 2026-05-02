@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { uid } from '../../utils/dates';
 import { reorder } from '../../utils/expressions';
-import S from '../../styles/shared';
+import styles from './CategoryFormModal.module.css';
 import type { Category, CategoryField, Subcategory } from '../../types';
 
 interface CategoryFormModalProps {
@@ -66,17 +66,17 @@ export default function CategoryFormModal({ editing, category, onSave, onClose }
   };
 
   return (
-    <div style={S.modalContent}>
-      <h2 style={S.modalTitle}>{isNew ? "New Category" : "Edit Category"}</h2>
-      <label style={S.label}>Category Name *</label>
+    <div className={styles.modalContent}>
+      <h2 className={styles.modalTitle}>{isNew ? "New Category" : "Edit Category"}</h2>
+      <label className={styles.label}>Category Name *</label>
       <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ width: "100%", marginBottom: 14 }} autoFocus />
-      <label style={S.label}>Max Years in Advance</label>
+      <label className={styles.label}>Max Years in Advance</label>
       <select value={form.maxYears} onChange={e => setForm(p => ({ ...p, maxYears: +e.target.value }))} style={{ width: "100%", marginBottom: 18 }}>
         {[1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35].map(n => <option key={n} value={n}>{n} year{n > 1 ? "s" : ""}</option>)}
       </select>
       <div style={{ marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <label style={{ ...S.label, marginBottom: 0 }}>Custom Fields</label>
-        <button onClick={addField} style={{ ...S.btnSmall, fontSize: 12 }}>+ Field</button>
+        <label className={styles.label} style={{ marginBottom: 0 }}>Custom Fields</label>
+        <button onClick={addField} className={styles.btnSmall} style={{ fontSize: 12 }}>+ Field</button>
       </div>
       <div style={{ background: "var(--chip2)", borderRadius: 10, padding: 12, marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", opacity: .5 }}>
@@ -107,7 +107,7 @@ export default function CategoryFormModal({ editing, category, onSave, onClose }
                   </div>
                 ))}
                 <button onClick={() => updateField(f.id, "options", [...(f.options || []), ""])}
-                  style={{ ...S.btnSmall, fontSize: 11, marginTop: 6, padding: "3px 8px" }}>+ Option</button>
+                  className={styles.btnSmall} style={{ fontSize: 11, marginTop: 6, padding: "3px 8px" }}>+ Option</button>
               </div>
             )}
           </div>
@@ -117,8 +117,8 @@ export default function CategoryFormModal({ editing, category, onSave, onClose }
 
       {/* Subcategories */}
       <div style={{ marginBottom: 8, marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <label style={{ ...S.label, marginBottom: 0 }}>Subcategories</label>
-        <button onClick={addSub} style={{ ...S.btnSmall, fontSize: 12 }}>+ Subcategory</button>
+        <label className={styles.label} style={{ marginBottom: 0 }}>Subcategories</label>
+        <button onClick={addSub} className={styles.btnSmall} style={{ fontSize: 12 }}>+ Subcategory</button>
       </div>
       <div style={{ background: "var(--chip2)", borderRadius: 10, padding: 12, marginBottom: 6 }}>
         {form.subcategories.map((s, si) => (
@@ -139,8 +139,8 @@ export default function CategoryFormModal({ editing, category, onSave, onClose }
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-        <button onClick={onClose} style={S.btnGhostModal}>Cancel</button>
-        <button onClick={handleSave} className="btn-hover" style={{ ...S.btnPrimary, flex: 1 }}>{isNew ? "Create Category" : "Save Changes"}</button>
+        <button onClick={onClose} className={styles.btnGhostModal}>Cancel</button>
+        <button onClick={handleSave} className={`btn-hover ${styles.btnPrimary}`} style={{ flex: 1 }}>{isNew ? "Create Category" : "Save Changes"}</button>
       </div>
     </div>
   );

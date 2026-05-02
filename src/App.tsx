@@ -5,7 +5,7 @@ import { reorder } from './utils/expressions';
 import { CHART_COLORS } from './constants';
 import useBudgetStore from './store/useBudgetStore';
 import useUIStore from './store/useUIStore';
-import S from './styles/shared';
+import styles from './App.module.css';
 import type { Category, ExpenseEntry } from './types';
 
 // Components
@@ -115,10 +115,10 @@ export default function BudgetApp() {
   );
 
   if (!appData) return (
-    <div className={dark?"theme-dark":"theme-light"} style={S.loadWrap}>
+    <div className={`${dark?"theme-dark":"theme-light"} ${styles.loadWrap}`}>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,animation:"fadeIn .5s"}}>
         <div style={{width:44,height:44,border:"2px solid var(--border)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin .8s linear infinite",boxShadow:"0 0 20px var(--accent-glow)"}} />
-        <span style={S.loadText}>Loading Summa...</span>
+        <span className={styles.loadText}>Loading Summa...</span>
       </div>
     </div>
   );
@@ -127,21 +127,21 @@ export default function BudgetApp() {
   const catMaxYear = getCY() + (cat?.maxYears || 5);
 
   return (
-    <div style={S.root}>
+    <div className={styles.root}>
 
-      {toast && <div style={S.toast}>{toast}</div>}
+      {toast && <div className={styles.toast}>{toast}</div>}
 
       {/* HEADER */}
-      <header style={{...S.header,boxShadow:"var(--header-shadow)"}}>
-        <div className="header-inner" style={S.headerInner}>
+      <header className={styles.header} style={{boxShadow:"var(--header-shadow)"}}>
+        <div className={`header-inner ${styles.headerInner}`}>
           <div style={{display:"flex",alignItems:"baseline",gap:8}}>
-            <h1 style={S.logo}>Summa</h1>
-            <span style={S.logoSub}>personal finance, clearly</span>
+            <h1 className={styles.logo}>Summa</h1>
+            <span className={styles.logoSub}>personal finance, clearly</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <nav style={S.tabs}>
+            <nav className={styles.tabs}>
               {([ ["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"] ] as [string,string][]).map(([k,label])=>(
-                <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} style={{...S.tab,...(tab===k?S.tabActive:{})}}>
+                <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} className={`${styles.tab} ${tab===k ? styles.tabActive : ''}`}>
                   {label}
                 </button>
               ))}
@@ -154,7 +154,7 @@ export default function BudgetApp() {
         </div>
       </header>
 
-      <main className="main-area" style={S.main}>
+      <main className={`main-area ${styles.main}`}>
 
         {/* ═══ DASHBOARD TAB ═══ */}
         {tab === "dashboard" && (() => {
@@ -235,7 +235,7 @@ export default function BudgetApp() {
 
           return (
             <div style={{animation:"fadeIn .35s"}}>
-              <h2 style={{...S.sectionTitle,marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
+              <h2 className={styles.sectionTitle} style={{marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
 
               {/* Summary cards */}
               <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14,marginBottom:28}}>
@@ -245,7 +245,7 @@ export default function BudgetApp() {
                   { label:"Anticipated", value:curAnticipated, color:"var(--amber)", icon:"◷" },
                   { label:"Balance", value:curBalance, color:curBalance>=0?"var(--accent)":"var(--red)", icon:"◎" },
                 ].map((c,i)=>(
-                  <div key={i} className="summary-h stagger-card glass-card chart-3d" style={{...S.summaryCard,animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
+                  <div key={i} className={`summary-h stagger-card glass-card chart-3d ${styles.summaryCard}`} style={{animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
                     <span style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif"}}>{c.icon} {c.label}</span>
                     <div style={{fontSize:26,fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
                   </div>
@@ -253,8 +253,8 @@ export default function BudgetApp() {
               </div>
 
               {/* Mini chart */}
-              <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,animationDelay:"150ms",position:"relative",transformStyle:"preserve-3d"}}>
-                <h3 style={S.chartTitle}>Last 6 Months</h3>
+              <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"150ms",position:"relative",transformStyle:"preserve-3d"}}>
+                <h3 className={styles.chartTitle}>Last 6 Months</h3>
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={miniData} barGap={2}>
                     <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
@@ -271,8 +271,8 @@ export default function BudgetApp() {
               {/* Two-column: Upcoming + Recent */}
               <div className="budget-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
                 {/* Upcoming unpaid */}
-                <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,animationDelay:"250ms",position:"relative",transformStyle:"preserve-3d"}}>
-                  <h3 style={S.chartTitle}>Upcoming Unpaid</h3>
+                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"250ms",position:"relative",transformStyle:"preserve-3d"}}>
+                  <h3 className={styles.chartTitle}>Upcoming Unpaid</h3>
                   {upcoming.length === 0 ? (
                     <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>All caught up — nothing unpaid.</p>
                   ) : (
@@ -293,8 +293,8 @@ export default function BudgetApp() {
                 </div>
 
                 {/* Recent payments */}
-                <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
-                  <h3 style={S.chartTitle}>Recent Payments</h3>
+                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
+                  <h3 className={styles.chartTitle}>Recent Payments</h3>
                   {recentSlice.length === 0 ? (
                     <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>No payments recorded yet.</p>
                   ) : (
@@ -321,11 +321,11 @@ export default function BudgetApp() {
         {tab === "expenses" && (
           <div className="exp-layout" style={{animation:"fadeIn .35s",display:"flex",gap:20,alignItems:"flex-start"}}>
             {/* Left sidebar — category nav */}
-            <div className="cat-sidebar" style={S.catSidebar}>
-              <div style={S.catSidebarHeader}>
+            <div className={`cat-sidebar ${styles.catSidebar}`}>
+              <div className={styles.catSidebarHeader}>
                 <span style={{fontSize:11,fontWeight:600,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Categories</span>
               </div>
-              <div className="cat-sidebar-list" style={S.catSidebarList}>
+              <div className={`cat-sidebar-list ${styles.catSidebarList}`}>
                 {categories.map((c, i) => (
                   <div key={c.id} draggable
                     onDragStart={e=>{setDragIdx(i);e.dataTransfer.effectAllowed="move";e.currentTarget.classList.add("dragging");}}
@@ -333,12 +333,12 @@ export default function BudgetApp() {
                     onDragOver={e=>{e.preventDefault();e.currentTarget.classList.add("drag-over");}}
                     onDragLeave={e=>e.currentTarget.classList.remove("drag-over")}
                     onDrop={e=>{e.preventDefault();e.currentTarget.classList.remove("drag-over");if(dragIdx!==null&&dragIdx!==i){reorderCategories(dragIdx,i);if(catIdx===dragIdx)setCatIdx(i);else if(dragIdx<catIdx&&i>=catIdx)setCatIdx(catIdx-1);else if(dragIdx>catIdx&&i<=catIdx)setCatIdx(catIdx+1);}setDragIdx(null);}}
-                    style={{...S.catSideItem,...(catIdx === i ? S.catSideItemActive : {}),justifyContent:"space-between"}}>
+                    className={`${styles.catSideItem} ${catIdx === i ? styles.catSideItemActive : ''}`} style={{justifyContent:"space-between"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0,cursor:"pointer"}}
                       onClick={() => { setCatIdx(i); setExpYear(getCY()); setExpSel(new Set()); }}>
                       <span style={{fontSize:11,color:catIdx===i?"rgba(255,255,255,.5)":"var(--faint)",cursor:"grab"}}>⠿</span>
                       <span style={{flex:1,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</span>
-                      {c.maxYears > 5 && <span style={{...S.loanBadgeSide,...(catIdx===i?{background:"rgba(255,255,255,.2)",color:"#fff"}:{})}} >long-term</span>}
+                      {c.maxYears > 5 && <span className={styles.loanBadgeSide} style={catIdx===i?{background:"rgba(255,255,255,.2)",color:"#fff"}:{}} >long-term</span>}
                     </div>
                     {!c.protected && (
                       <div style={{display:"flex",gap:2,flexShrink:0,marginLeft:4}}>
@@ -353,7 +353,7 @@ export default function BudgetApp() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => setModal({type:"addCat"})} className="btn-hover" style={{...S.btnGhost,width:"100%",marginTop:8,fontSize:11,padding:"6px 10px"}}>+ Add Category</button>
+              <button onClick={() => setModal({type:"addCat"})} className={`btn-hover ${styles.btnGhost}`} style={{width:"100%",marginTop:8,fontSize:11,padding:"6px 10px"}}>+ Add Category</button>
             </div>
 
             {/* Right content */}
@@ -369,11 +369,11 @@ export default function BudgetApp() {
                 />
               ) : cat ? (
                 <>
-                  <div style={S.yearNav}>
-                    <button onClick={() => { if(expYear > MIN_YEAR) { setExpYear(expYear - 1); setExpSel(new Set()); }}} className="year-btn-h" style={{...S.yearBtn,opacity:expYear>MIN_YEAR?1:.3}}>◂</button>
-                    <span style={S.yearLabel}>{expYear}</span>
-                    <button onClick={() => { if(expYear < catMaxYear-1) { setExpYear(expYear + 1); setExpSel(new Set()); }}} className="year-btn-h" style={{...S.yearBtn,opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
-                    <span style={S.yearRange}>range: {MIN_YEAR} – {catMaxYear - 1}</span>
+                  <div className={styles.yearNav}>
+                    <button onClick={() => { if(expYear > MIN_YEAR) { setExpYear(expYear - 1); setExpSel(new Set()); }}} className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear>MIN_YEAR?1:.3}}>◂</button>
+                    <span className={styles.yearLabel}>{expYear}</span>
+                    <button onClick={() => { if(expYear < catMaxYear-1) { setExpYear(expYear + 1); setExpSel(new Set()); }}} className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
+                    <span className={styles.yearRange}>range: {MIN_YEAR} – {catMaxYear - 1}</span>
                   </div>
 
                   {(() => {
@@ -481,13 +481,13 @@ export default function BudgetApp() {
                       {expSel.size > 0 && (
                         <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"var(--accent-bg)",borderRadius:10,marginBottom:10}}>
                           <span style={{fontSize:13,fontWeight:600,color:"var(--accent)",flex:1}}>{expSel.size} selected</span>
-                          <button onClick={()=>setExpSel(new Set())} style={S.btnSmall}>Deselect</button>
+                          <button onClick={()=>setExpSel(new Set())} className={styles.btnSmall}>Deselect</button>
                           <button onClick={()=>{bulkDelExp(cat.id,[...expSel]);setExpSel(new Set());flash(`Deleted ${expSel.size} entr${expSel.size===1?"y":"ies"}!`);}}
-                            style={{...S.btnSmall,color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
+                            className={styles.btnSmall} style={{color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
                         </div>
                       )}
-                      <div style={{...S.listWrap,overflowX:"auto"}}>
-                        <div style={S.listHeader}>
+                      <div className={styles.listWrap} style={{overflowX:"auto"}}>
+                        <div className={styles.listHeader}>
                           <span style={{width:30}} onClick={e=>e.stopPropagation()}>
                             {filledKeys.length > 0 && (
                               <span onClick={toggleAll}
@@ -518,9 +518,9 @@ export default function BudgetApp() {
                           const isCurrent = expYear === getCY() && mi === getCM();
                           const isSel = expSel.has(key);
                           return (
-                            <div key={mi} className="hov stagger-row"
+                            <div key={mi} className={`hov stagger-row ${styles.listRow} ${isCurrent ? styles.listRowCurrent : ''}`}
                               onClick={() => setModal({type:"editExp",catId:cat.id,catObj:cat,monthKey:key,monthLabel:`${mName} ${expYear}`,entry})}
-                              style={{...S.listRow,...(isCurrent?S.listRowCurrent:{}),...(isPast?{opacity:.5}:{}), ...(isSel?{background:"var(--accent-bg)"}:{}), animationDelay:`${mi*25}ms`}}>
+                              style={{...(isPast?{opacity:.5}:{}), ...(isSel?{background:"var(--accent-bg)"}:{}), animationDelay:`${mi*25}ms`}}>
                               <span style={{width:30}} onClick={e=>e.stopPropagation()}>
                                 {hasData && (
                                   <span onClick={()=>toggleSel(key)}
@@ -531,7 +531,7 @@ export default function BudgetApp() {
                               </span>
                               <span style={{width:70,fontWeight:600,fontSize:13,color:"var(--text2)",display:"flex",alignItems:"center",gap:6}}>
                                 {mName}
-                                {isCurrent && <span style={S.nowBadge}>now</span>}
+                                {isCurrent && <span className={styles.nowBadge}>now</span>}
                               </span>
                               {cols.map(c => <span key={c.id} style={colStyle(c)}>{c.cell(entry,key)}</span>)}
                               <span style={{width:50,textAlign:"right"}}>
@@ -548,7 +548,7 @@ export default function BudgetApp() {
                     </>;
                   })()}
 
-                  <div style={S.yearTotal}>
+                  <div className={styles.yearTotal}>
                     <span style={{color:"var(--muted)"}}>Total for {expYear}:</span>
                     <span style={{fontWeight:600,fontSize:18,color:"var(--text)"}}>
                       {fmt(MONTHS.reduce((s,_,mi) => s + (getExp(cat.id, mk(expYear,mi))?.amount||0), 0))}
@@ -557,11 +557,11 @@ export default function BudgetApp() {
                 </>
               ) : null}
               {categories.length === 0 && (
-                <div style={S.emptyState}>
+                <div className={styles.emptyState}>
                   <div style={{fontSize:32,marginBottom:8,opacity:.5}}>📂</div>
                   <p style={{fontWeight:500,marginBottom:4}}>No categories yet</p>
                   <p style={{fontSize:12,color:"var(--faintest)",marginBottom:12}}>Create your first category to start tracking expenses.</p>
-                  <button onClick={()=>setModal({type:"addCat"})} className="btn-hover" style={{...S.btnPrimary,fontSize:13,padding:"10px 18px"}}>Create your first category</button>
+                  <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnPrimary}`} style={{fontSize:13,padding:"10px 18px"}}>Create your first category</button>
                 </div>
               )}
             </div>
@@ -573,15 +573,15 @@ export default function BudgetApp() {
           <div style={{animation:"fadeIn .35s"}}>
             {/* Fixed */}
             <section>
-              <div style={S.sectionHead}>
+              <div className={styles.sectionHead}>
                 <div>
-                  <h2 style={S.sectionTitle}>Fixed Incomes</h2>
-                  <p style={S.sectionSub}>Recurring monthly income. Schedule future raises by adding a new amount record with a future effective date.</p>
+                  <h2 className={styles.sectionTitle}>Fixed Incomes</h2>
+                  <p className={styles.sectionSub}>Recurring monthly income. Schedule future raises by adding a new amount record with a future effective date.</p>
                 </div>
-                <button onClick={()=>setModal({type:"addFixedIncome"})} className="btn-hover" style={S.btnPrimary}>+ Add Source</button>
+                <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`}>+ Add Source</button>
               </div>
               {fixedIncomes.length === 0 ? (
-                <div style={S.emptyState}>
+                <div className={styles.emptyState}>
                   <div style={{fontSize:32,marginBottom:8,opacity:.5}}>💰</div>
                   <p style={{fontWeight:500,marginBottom:4}}>No fixed income sources yet</p>
                   <p style={{fontSize:12,color:"var(--faintest)"}}>Add your salary or other recurring income to get started.</p>
@@ -592,7 +592,7 @@ export default function BudgetApp() {
                     const sorted = [...(src.records||[])].sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom));
                     const current = sorted.filter(r=>r.effectiveFrom<=mk(getCY(),getCM())).pop();
                     return (
-                      <div key={src.id} className="stagger-card card-h" style={{...S.incomeCard,animationDelay:`${si*80}ms`,transition:"border-color .2s, box-shadow .2s"}}>
+                      <div key={src.id} className={`stagger-card card-h ${styles.incomeCard}`} style={{animationDelay:`${si*80}ms`,transition:"border-color .2s, box-shadow .2s"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                           <div>
                             <h3 style={{fontSize:16,fontWeight:600,marginBottom:4}}>{src.name}</h3>
@@ -604,8 +604,8 @@ export default function BudgetApp() {
                             {!current && <div style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic"}}>Starts in the future</div>}
                           </div>
                           <div style={{display:"flex",gap:6}}>
-                            <button onClick={()=>setModal({type:"editFixedIncome",idx:si,src})} style={S.btnSmall}>Edit</button>
-                            <button onClick={()=>{deleteFixedIncome(si);flash("Deleted!");}} style={{...S.btnSmall,color:"var(--red)",borderColor:"var(--red)"}}>Delete</button>
+                            <button onClick={()=>setModal({type:"editFixedIncome",idx:si,src})} className={styles.btnSmall}>Edit</button>
+                            <button onClick={()=>{deleteFixedIncome(si);flash("Deleted!");}} className={styles.btnSmall} style={{color:"var(--red)",borderColor:"var(--red)"}}>Delete</button>
                           </div>
                         </div>
                         {sorted.length > 0 && (
@@ -614,7 +614,7 @@ export default function BudgetApp() {
                               const {y,m}=parseMk(r.effectiveFrom);
                               const isUpcoming = r.effectiveFrom > mk(getCY(),getCM());
                               return (
-                                <span key={ri} style={{...S.timeChip,...(isUpcoming?{background:"var(--upcoming-bg)",color:"var(--amber)",border:"1px solid var(--upcoming-border)"}:{})}}>
+                                <span key={ri} className={styles.timeChip} style={isUpcoming?{background:"var(--upcoming-bg)",color:"var(--amber)",border:"1px solid var(--upcoming-border)"}:{}}>
                                   {fmt(r.amount)} from {MONTHS[m]} {y}{isUpcoming?" ⏳":""}
                                 </span>
                               );
@@ -630,15 +630,15 @@ export default function BudgetApp() {
 
             {/* Variable */}
             <section style={{marginTop:32}}>
-              <div style={S.sectionHead}>
+              <div className={styles.sectionHead}>
                 <div>
-                  <h2 style={S.sectionTitle}>Variable Incomes</h2>
-                  <p style={S.sectionSub}>One-time or irregular income assigned to a specific month.</p>
+                  <h2 className={styles.sectionTitle}>Variable Incomes</h2>
+                  <p className={styles.sectionSub}>One-time or irregular income assigned to a specific month.</p>
                 </div>
-                <button onClick={()=>setModal({type:"addVarIncome"})} className="btn-hover" style={S.btnPrimary}>+ Add Entry</button>
+                <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`}>+ Add Entry</button>
               </div>
               {variableIncomes.length === 0 ? (
-                <div style={S.emptyState}>
+                <div className={styles.emptyState}>
                   <div style={{fontSize:32,marginBottom:8,opacity:.5}}>📋</div>
                   <p style={{fontWeight:500,marginBottom:4}}>No variable income recorded yet</p>
                   <p style={{fontSize:12,color:"var(--faintest)"}}>Add one-time or irregular income entries here.</p>
@@ -648,13 +648,13 @@ export default function BudgetApp() {
                   {varSel.size > 0 && (
                     <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"var(--accent-bg)",borderRadius:10,marginBottom:10}}>
                       <span style={{fontSize:13,fontWeight:600,color:"var(--accent)",flex:1}}>{varSel.size} selected</span>
-                      <button onClick={()=>setVarSel(new Set())} style={S.btnSmall}>Deselect</button>
+                      <button onClick={()=>setVarSel(new Set())} className={styles.btnSmall}>Deselect</button>
                       <button onClick={()=>{bulkDelVarInc(varSel);setVarSel(new Set());flash(`Deleted ${varSel.size} entr${varSel.size===1?"y":"ies"}!`);}}
-                        style={{...S.btnSmall,color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
+                        className={styles.btnSmall} style={{color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
                     </div>
                   )}
-                  <div style={S.tableWrap}>
-                    <div style={S.tableHeader}>
+                  <div className={styles.tableWrap}>
+                    <div className={styles.tableHeader}>
                       <span style={{width:30}}>
                         {variableIncomes.length > 0 && (
                           <span onClick={()=>{
@@ -673,7 +673,7 @@ export default function BudgetApp() {
                       const {y,m}=parseMk(v.month);
                       const isSel = varSel.has(v.id);
                       return (
-                        <div key={v.id} className="hov" style={{...S.tableRow,...(isSel?{background:"var(--accent-bg)"}:{})}}>
+                        <div key={v.id} className={`hov ${styles.tableRow}`} style={{...(isSel?{background:"var(--accent-bg)"}:{})}}>
                           <span style={{width:30}} onClick={e=>e.stopPropagation()}>
                             <span onClick={()=>{const n=new Set(varSel);n.has(v.id)?n.delete(v.id):n.add(v.id);setVarSel(n);}}
                               style={{width:16,height:16,borderRadius:4,border:isSel?"none":"1.5px solid var(--faint)",background:isSel?"var(--accent)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
@@ -708,7 +708,7 @@ export default function BudgetApp() {
 
       {/* ═══ MODALS ═══ */}
       {modal && (
-        <div onClick={()=>setModal(null)} className="overlay-mobile" style={S.overlay}>
+        <div onClick={()=>setModal(null)} className={`overlay-mobile ${styles.overlay}`}>
           <div onClick={e=>e.stopPropagation()} className="modal-mobile" style={{animation:"slideUp .25s"}}>
             {modal.type==="editExp" && (
               <ExpenseModal catObj={modal.catObj} monthKey={modal.monthKey} monthLabel={modal.monthLabel}
@@ -748,14 +748,14 @@ export default function BudgetApp() {
                 onClose={()=>setModal(null)} />
             )}
             {modal.type==="confirmDeleteCat" && (
-              <div style={S.modalContent}>
-                <h2 style={S.modalTitle}>Delete Category</h2>
+              <div className={styles.modalContent}>
+                <h2 className={styles.modalTitle}>Delete Category</h2>
                 <p style={{color:"var(--text2)",fontSize:14,marginTop:8,marginBottom:20}}>
                   Are you sure you want to delete <strong>{modal.catName}</strong>? All expense data for this category will be permanently lost.
                 </p>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setModal(null)} style={S.btnGhostModal}>Cancel</button>
-                  <button onClick={()=>{deleteCategory(modal.idx);if(catIdx>=categories.length-1)setCatIdx(Math.max(0,categories.length-2));flash("Category deleted!");setModal(null);}} className="btn-hover" style={{...S.btnPrimary,flex:1,background:"var(--red)"}}>Delete</button>
+                  <button onClick={()=>setModal(null)} className={styles.btnGhostModal}>Cancel</button>
+                  <button onClick={()=>{deleteCategory(modal.idx);if(catIdx>=categories.length-1)setCatIdx(Math.max(0,categories.length-2));flash("Category deleted!");setModal(null);}} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,background:"var(--red)"}}>Delete</button>
                 </div>
               </div>
             )}

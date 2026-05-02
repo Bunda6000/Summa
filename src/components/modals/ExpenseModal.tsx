@@ -3,7 +3,7 @@ import DatePicker from '../DatePicker';
 import { today, fmtDate, parseMk } from '../../utils/dates';
 import { fmt } from '../../utils/formatters';
 import { evalExpr, reorder } from '../../utils/expressions';
-import S from '../../styles/shared';
+import styles from './ExpenseModal.module.css';
 import type { Category, Subcategory, ExpenseEntry } from '../../types';
 
 interface ExpenseModalProps {
@@ -94,13 +94,13 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
   const overMax = appliedMonths > maxMonths;
 
   return (
-    <div style={S.modalContent}>
-      <h2 style={S.modalTitle}>{entry ? "Edit" : "Add"} Expense</h2>
+    <div className={styles.modalContent}>
+      <h2 className={styles.modalTitle}>{entry ? "Edit" : "Add"} Expense</h2>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>{catObj.name} — {monthLabel}</p>
 
       {hasSubs ? (
         <div style={{ marginBottom: 14 }}>
-          <label style={S.label}>Subcategories</label>
+          <label className={styles.label}>Subcategories</label>
           <div style={{ background: "var(--chip2)", borderRadius: 10, padding: 12 }}>
             {subOrder.map((sc, si) => {
               const sp = subPaid[sc.id];
@@ -150,7 +150,7 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
         </div>
       ) : (
         <>
-          <label style={S.label}>Amount *</label>
+          <label className={styles.label}>Amount *</label>
           <input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)}
             onBlur={e => { const v = evalExpr(e.target.value); if (!isNaN(v) && v >= 0) setAmount(v); }}
             onKeyDown={e => { if (e.key === "Enter") { const v = evalExpr((e.target as HTMLInputElement).value); if (!isNaN(v) && v >= 0) setAmount(v); } }}
@@ -159,7 +159,7 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
       )}
       {catObj.fields.map(f => (
         <div key={f.id} style={{ marginBottom: 14 }}>
-          <label style={S.label}>{f.name}</label>
+          <label className={styles.label}>{f.name}</label>
           {f.type === "select" ? (
             <select value={fields[f.id] || ""} onChange={e => setField(f.id, e.target.value)} style={{ width: "100%" }}>
               <option value="">— Select —</option>
@@ -174,8 +174,8 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
       {/* Extra fields */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <label style={{ ...S.label, marginBottom: 0 }}>Additional Info</label>
-          <button onClick={addExtra} style={{ ...S.btnSmall, fontSize: 11, padding: "3px 8px" }}>+ Add Field</button>
+          <label className={styles.label} style={{ marginBottom: 0 }}>Additional Info</label>
+          <button onClick={addExtra} className={styles.btnSmall} style={{ fontSize: 11, padding: "3px 8px" }}>+ Add Field</button>
         </div>
         {extras.length === 0 && (
           <p style={{ fontSize: 12, color: "var(--faintest)", fontStyle: "italic" }}>None. Add fields like Invoice, Note, Reference, etc.</p>
@@ -194,13 +194,13 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
       {/* Payment status — only for categories without subcategories */}
       {!hasSubs && (
         <div style={{ marginBottom: 14 }}>
-          <label style={S.checkLabel}>
+          <label className={styles.checkLabel}>
             <input type="checkbox" checked={paid} onChange={e => { setPaid(e.target.checked); if (e.target.checked && !paidDate) setPaidDate(today()); }} style={{ marginRight: 8, accentColor: "var(--accent)" }} />
             Marked as paid
           </label>
           {paid && (
             <div style={{ marginTop: 8, padding: "0 4px" }}>
-              <label style={S.label}>Payment Date</label>
+              <label className={styles.label}>Payment Date</label>
               <DatePicker value={paidDate} onChange={d => setPaidDate(d)}
                 monthKey={monthKey} suggestedDay={suggestedDay}
                 style={{ width: "100%", border: "1.5px solid var(--border-input)", fontSize: 14, padding: "9px 12px", textAlign: "left" }} />
@@ -211,7 +211,7 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
 
       {maxMonths > 0 && (
         <div style={{ marginTop: 4 }}>
-          <label style={S.checkLabel}>
+          <label className={styles.checkLabel}>
             <input type="checkbox" checked={applyEnabled} onChange={e => setApplyEnabled(e.target.checked)} style={{ marginRight: 8, accentColor: "var(--accent)" }} />
             Also apply to the next...
           </label>
@@ -234,10 +234,10 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
         </div>
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-        <button onClick={onClose} style={S.btnGhostModal}>Cancel</button>
-        <button onClick={handleSave} className="btn-hover" style={{ ...S.btnPrimary, flex: 1 }}>Save</button>
+        <button onClick={onClose} className={styles.btnGhostModal}>Cancel</button>
+        <button onClick={handleSave} className={`btn-hover ${styles.btnPrimary}`} style={{ flex: 1 }}>Save</button>
       </div>
-      {entry && <button onClick={onDelete} style={S.deleteLink}>Delete this entry</button>}
+      {entry && <button onClick={onDelete} className={styles.deleteLink}>Delete this entry</button>}
     </div>
   );
 }

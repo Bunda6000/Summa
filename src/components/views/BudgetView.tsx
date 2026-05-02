@@ -13,7 +13,7 @@ import Bar3D from '../charts/Bar3D';
 import { mk, MONTHS } from '../../utils/dates';
 import { fmt } from '../../utils/formatters';
 import { CHART_COLORS } from '../../constants';
-import S from '../../styles/shared';
+import styles from './BudgetView.module.css';
 import type { Category, Expenses } from '../../types';
 
 interface BudgetViewProps {
@@ -213,10 +213,10 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
 
   return (
     <div style={{animation:"fadeIn .35s"}}>
-      <div style={{...S.yearNav,marginBottom:24}}>
-        <button onClick={()=>setYear(year-1)} className="year-btn-h" style={S.yearBtn}>◂</button>
-        <span style={S.yearLabel}>{year}</span>
-        <button onClick={()=>setYear(year+1)} className="year-btn-h" style={S.yearBtn}>▸</button>
+      <div className={styles.yearNav} style={{marginBottom:24}}>
+        <button onClick={()=>setYear(year-1)} className={`year-btn-h ${styles.yearBtn}`}>◂</button>
+        <span className={styles.yearLabel}>{year}</span>
+        <button onClick={()=>setYear(year+1)} className={`year-btn-h ${styles.yearBtn}`}>▸</button>
       </div>
 
       <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:14,marginBottom:28}}>
@@ -226,7 +226,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
           { label:"Anticipated", value:yearTotals.anticipated, color:"var(--amber)", icon:"◷", sub:"unpaid entries" },
           { label:"Net Balance", value:yearTotals.balance, color:yearTotals.balance>=0?"var(--accent)":"var(--red)", icon:"◎", sub:"income − paid" },
         ].map((c,i)=>(
-          <div key={i} className="summary-h stagger-card glass-card chart-3d" style={{...S.summaryCard,animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
+          <div key={i} className={`summary-h stagger-card glass-card chart-3d ${styles.summaryCard}`} style={{animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
             <span style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif"}}>{c.icon} {c.label}</span>
             <div style={{fontSize:28,fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
             {c.sub && <div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{c.sub}</div>}
@@ -235,8 +235,8 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-        <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,animationDelay:"100ms",position:"relative",transformStyle:"preserve-3d"}}>
-          <h3 style={S.chartTitle}>Monthly Income vs Expenses</h3>
+        <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"100ms",position:"relative",transformStyle:"preserve-3d"}}>
+          <h3 className={styles.chartTitle}>Monthly Income vs Expenses</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={monthlyData} barGap={2}>
               <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
@@ -270,8 +270,8 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
           </ResponsiveContainer>
         </div>
 
-        <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,animationDelay:"200ms",position:"relative",transformStyle:"preserve-3d"}}>
-          <h3 style={S.chartTitle}>Monthly Balance</h3>
+        <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"200ms",position:"relative",transformStyle:"preserve-3d"}}>
+          <h3 className={styles.chartTitle}>Monthly Balance</h3>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={monthlyData}>
               <defs>
@@ -291,9 +291,9 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
 
       <div className="budget-grid-2" style={{display:"grid",gridTemplateColumns:catBreakdown.length>0?"1fr 1fr":"1fr",gap:14}}>
         {catBreakdown.length > 0 && (
-          <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
+          <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <h3 style={{...S.chartTitle,marginBottom:0}}>Expense Breakdown</h3>
+              <h3 className={styles.chartTitle} style={{marginBottom:0}}>Expense Breakdown</h3>
               {viewSelect(breakdownView,setBreakdownView,BREAKDOWN_VIEWS)}
             </div>
             {renderBreakdownChart()}
@@ -311,9 +311,9 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
             </div>
           </div>
         )}
-        <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,animationDelay:"350ms",position:"relative",transformStyle:"preserve-3d"}}>
+        <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"350ms",position:"relative",transformStyle:"preserve-3d"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <h3 style={{...S.chartTitle,marginBottom:0}}>Spending Trends</h3>
+            <h3 className={styles.chartTitle} style={{marginBottom:0}}>Spending Trends</h3>
             {viewSelect(trendView,setTrendView,TREND_VIEWS)}
           </div>
           {renderTrendChart()}
@@ -333,37 +333,37 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         </div>
       </div>
 
-      <div className="stagger-card glass-card chart-3d" style={{...S.chartCard,marginTop:14,animationDelay:"400ms",position:"relative",transformStyle:"preserve-3d"}}>
-        <h3 style={S.chartTitle}>Monthly Detail</h3>
+      <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{marginTop:14,animationDelay:"400ms",position:"relative",transformStyle:"preserve-3d"}}>
+        <h3 className={styles.chartTitle}>Monthly Detail</h3>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
             <thead>
               <tr style={{borderBottom:"2px solid var(--border)"}}>
                 {["Month","Fixed Inc.","Variable Inc.","Total Inc.","Paid","Anticipated","Balance"].map(h=>(
-                  <th key={h} style={S.th}>{h}</th>
+                  <th key={h} className={styles.th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {monthlyData.map((d,i)=>(
                 <tr key={i} className="stagger-row" style={{borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
-                  <td style={S.td}>{d.month}</td>
-                  <td style={S.td}>{fmt(d.fixedIncome)}</td>
-                  <td style={S.td}>{fmt(d.varIncome)}</td>
-                  <td style={{...S.td,fontWeight:600}}>{fmt(d.totalIncome)}</td>
-                  <td style={{...S.td,color:"var(--red)",fontWeight:500}}>{fmt(d.paid)}</td>
-                  <td style={{...S.td,color:"var(--amber)"}}>{fmt(d.anticipated)}</td>
-                  <td style={{...S.td,fontWeight:600,color:d.balance>=0?"var(--accent)":"var(--red)"}}>{fmt(d.balance)}</td>
+                  <td className={styles.td}>{d.month}</td>
+                  <td className={styles.td}>{fmt(d.fixedIncome)}</td>
+                  <td className={styles.td}>{fmt(d.varIncome)}</td>
+                  <td className={styles.td} style={{fontWeight:600}}>{fmt(d.totalIncome)}</td>
+                  <td className={styles.td} style={{color:"var(--red)",fontWeight:500}}>{fmt(d.paid)}</td>
+                  <td className={styles.td} style={{color:"var(--amber)"}}>{fmt(d.anticipated)}</td>
+                  <td className={styles.td} style={{fontWeight:600,color:d.balance>=0?"var(--accent)":"var(--red)"}}>{fmt(d.balance)}</td>
                 </tr>
               ))}
               <tr style={{borderTop:"2px solid var(--border)",fontWeight:700}}>
-                <td style={S.td}>Total</td>
-                <td style={S.td}>{fmt(monthlyData.reduce((s,d)=>s+d.fixedIncome,0))}</td>
-                <td style={S.td}>{fmt(monthlyData.reduce((s,d)=>s+d.varIncome,0))}</td>
-                <td style={S.td}>{fmt(yearTotals.income)}</td>
-                <td style={{...S.td,color:"var(--red)"}}>{fmt(yearTotals.paid)}</td>
-                <td style={{...S.td,color:"var(--amber)"}}>{fmt(yearTotals.anticipated)}</td>
-                <td style={{...S.td,color:yearTotals.balance>=0?"var(--accent)":"var(--red)"}}>{fmt(yearTotals.balance)}</td>
+                <td className={styles.td}>Total</td>
+                <td className={styles.td}>{fmt(monthlyData.reduce((s,d)=>s+d.fixedIncome,0))}</td>
+                <td className={styles.td}>{fmt(monthlyData.reduce((s,d)=>s+d.varIncome,0))}</td>
+                <td className={styles.td}>{fmt(yearTotals.income)}</td>
+                <td className={styles.td} style={{color:"var(--red)"}}>{fmt(yearTotals.paid)}</td>
+                <td className={styles.td} style={{color:"var(--amber)"}}>{fmt(yearTotals.anticipated)}</td>
+                <td className={styles.td} style={{color:yearTotals.balance>=0?"var(--accent)":"var(--red)"}}>{fmt(yearTotals.balance)}</td>
               </tr>
             </tbody>
           </table>
