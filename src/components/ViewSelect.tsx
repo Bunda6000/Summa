@@ -1,9 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 
-export default function ViewSelect({ value, onChange, options, dark }) {
+interface ViewOption {
+  id: string;
+  label: string;
+}
+
+interface ViewSelectProps {
+  value: string;
+  onChange: (id: string) => void;
+  options: ViewOption[];
+  dark: boolean;
+}
+
+export default function ViewSelect({ value, onChange, options, dark }: ViewSelectProps) {
   const [open, setOpen] = useState(false);
   const [anim, setAnim] = useState(false);
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   const openFn = () => {
     setOpen(true);
@@ -16,7 +28,7 @@ export default function ViewSelect({ value, onChange, options, dark }) {
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) closeFn(); };
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) closeFn(); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
@@ -44,7 +56,7 @@ export default function ViewSelect({ value, onChange, options, dark }) {
         {current?.label ?? "Select…"}
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
           style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5, flexShrink: 0 }}>
-          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
@@ -72,8 +84,8 @@ export default function ViewSelect({ value, onChange, options, dark }) {
                 <div
                   key={o.id}
                   onMouseDown={e => { e.preventDefault(); onChange(o.id); closeFn(); }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = active ? `${accentAlpha}0.14)` : "transparent"; }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = active ? `${accentAlpha}0.14)` : "transparent"; }}
                   style={{
                     padding: "7px 10px", borderRadius: 9, fontSize: 12,
                     cursor: "pointer", display: "flex", alignItems: "center",
@@ -87,7 +99,7 @@ export default function ViewSelect({ value, onChange, options, dark }) {
                   {o.label}
                   {active && (
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
-                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </div>

@@ -1,6 +1,19 @@
+import React from 'react';
+
+interface Bar3DProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  radius?: number | number[];
+  isActive?: boolean;
+  glowColor?: string;
+}
+
 /* 3D active bar shape — lifts, scales, adds top highlight & glow */
-export default function Bar3D(props) {
-  const { x, y, width, height, fill, radius, isActive, glowColor } = props;
+export default function Bar3D(props: Bar3DProps) {
+  const { x = 0, y = 0, width = 0, height = 0, fill, radius, isActive, glowColor } = props;
   if (!height || height <= 0) return null;
   const r = radius || 0;
   const topR = Array.isArray(r) ? r[0] : r;
@@ -21,7 +34,7 @@ export default function Bar3D(props) {
   const ah = height + lift;
   const gc = glowColor || fill;
   return (
-    <g style={{transition:"all .35s cubic-bezier(.22,1,.36,1)"}}>
+    <g style={{ transition: "all .35s cubic-bezier(.22,1,.36,1)" }}>
       {/* glow shadow */}
       <rect x={ax - 4} y={ay + 8} width={aw + 8} height={ah} rx={topR + 2} ry={topR + 2}
         fill={gc} opacity={0.25} filter="url(#bar3dBlur)" />

@@ -1,4 +1,6 @@
-const S = {
+import type React from 'react';
+
+const S: Record<string, React.CSSProperties> = {
   root:{background:"var(--bg)",backgroundImage:"radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 60%)",minHeight:"100vh",fontFamily:"'DM Sans',sans-serif",color:"var(--text)",WebkitTextSizeAdjust:"100%",position:"relative"},
   loadWrap:{background:"var(--bg)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"},
   loadText:{fontSize:16,color:"var(--muted)",fontWeight:400,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"0.3px"},

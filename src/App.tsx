@@ -6,6 +6,7 @@ import { CHART_COLORS } from './constants';
 import useBudgetStore from './store/useBudgetStore';
 import useUIStore from './store/useUIStore';
 import S from './styles/shared';
+import type { Category, ExpenseEntry } from './types';
 
 // Components
 import Bar3D from './components/charts/Bar3D';
@@ -23,6 +24,30 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid
 } from "recharts";
+
+// ── Modal payload types ──
+type ModalState =
+  | { type: "editExp"; catId: string; catObj: Category; monthKey: string; monthLabel: string; entry: ExpenseEntry | null }
+  | { type: "addCat" }
+  | { type: "editCat"; idx: number; cat: Category }
+  | { type: "confirmDeleteCat"; idx: number; catName: string }
+  | { type: "addFixedIncome" }
+  | { type: "editFixedIncome"; idx: number; src: import('./types').FixedIncome }
+  | { type: "addVarIncome" }
+  | { type: "editVarIncome"; item: import('./types').VariableIncome }
+  | null;
+
+// Column definition type used in expenses tab
+interface ColDef {
+  id: string;
+  label: string;
+  w?: number;
+  flex?: number;
+  minW?: number;
+  align?: string;
+  bold?: boolean;
+  cell: (entry: ExpenseEntry | null, key: string) => React.ReactNode;
+}
 
 /* ═══════════ MAIN APP ═══════════ */
 export default function BudgetApp() {
@@ -71,9 +96,13 @@ export default function BudgetApp() {
 
   // UI state
   const {
-    tab, catIdx, expYear, budgetYear, modal, toast, paidPicker, expSel, varSel, dragIdx, introDone,
-    setTab, setCatIdx, setExpYear, setBudgetYear, setModal, setPaidPicker, setExpSel, setVarSel, setDragIdx, setIntroDone, flash
+    tab, catIdx, expYear, budgetYear, modal: rawModal, toast, paidPicker, expSel, varSel, dragIdx, introDone,
+    setTab, setCatIdx, setExpYear, setBudgetYear, setModal: setRawModal, setPaidPicker, setExpSel, setVarSel, setDragIdx, setIntroDone, flash
   } = useUIStore();
+
+  // Typed modal helpers
+  const modal = rawModal as ModalState;
+  const setModal = (m: ModalState) => setRawModal(m as { type: string } | null);
 
   // Destructure appData for convenient access (guard against null)
   const { categories = [], expenses = {}, fixedIncomes = [], variableIncomes = [], loanTypes = [], loanPaid = {} } = appData || {};
@@ -209,8 +238,8 @@ export default function BudgetApp() {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <nav style={S.tabs}>
-              {[["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"]].map(([k,label])=>(
-                <button key={k} onClick={()=>setTab(k)} style={{...S.tab,...(tab===k?S.tabActive:{})}}>
+              {([ ["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"] ] as [string,string][]).map(([k,label])=>(
+                <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} style={{...S.tab,...(tab===k?S.tabActive:{})}}>
                   {label}
                 </button>
               ))}
@@ -234,7 +263,7 @@ export default function BudgetApp() {
           const curBalance = curIncome - curPaid;
 
           /* Last 6 months data for mini chart */
-          const miniData = [];
+          const miniData: {month:string;income:number;paid:number;balance:number}[] = [];
           for (let i = 5; i >= 0; i--) {
             let mm = getCM() - i, yy = getCY();
             while (mm < 0) { mm += 12; yy--; }
@@ -245,7 +274,7 @@ export default function BudgetApp() {
           }
 
           /* Upcoming unpaid expenses (this month + next 3) */
-          const upcoming = [];
+          const upcoming: {cat:string;sub:string|null;amount:number;month:string;label:string}[] = [];
           for (let i = 0; i < 4; i++) {
             let mm = getCM() + i, yy = getCY();
             while (mm > 11) { mm -= 12; yy++; }
@@ -275,7 +304,7 @@ export default function BudgetApp() {
           }
 
           /* Recent payments (last 10 paid items by paidDate) */
-          const recent = [];
+          const recent: {cat:string;sub:string|null;amount:number;paidDate:string}[] = [];
           categories.forEach(c => {
             if (c.id === "loans") {
               loanTypes.forEach(lt => {
@@ -329,10 +358,10 @@ export default function BudgetApp() {
                     <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"} />
                     <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#6A6A72":"#9A9AA0"}} axisLine={false} tickLine={false} />
-                    <YAxis tick={{fontSize:11,fill:dark?"#6A6A72":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
-                    <Tooltip formatter={v=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
-                    <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={p=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={p=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
-                    <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={p=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={p=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
+                    <YAxis tick={{fontSize:11,fill:dark?"#6A6A72":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
+                    <Tooltip formatter={(v: number)=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
+                    <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
+                    <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -446,19 +475,19 @@ export default function BudgetApp() {
                   </div>
 
                   {(() => {
-                    const hasSubs = cat.subcategories?.length > 0;
+                    const hasSubs = (cat.subcategories?.length ?? 0) > 0;
                     const filledKeys = MONTHS.map((_, mi) => mk(expYear, mi)).filter(k => {
                       const e = expenses?.[cat.id]?.[k];
                       if (!e) return false;
-                      if (hasSubs) return (cat.subcategories||[]).some(sc => e.subAmounts?.[sc.id] > 0) || e.amount > 0;
+                      if (hasSubs) return (cat.subcategories||[]).some(sc => (e.subAmounts?.[sc.id] ?? 0) > 0) || e.amount > 0;
                       return true;
                     });
                     const allSelected = filledKeys.length > 0 && filledKeys.every(k => expSel.has(k));
-                    const toggleSel = (k) => setExpSel(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+                    const toggleSel = (k: string) => { const n = new Set(expSel); n.has(k) ? n.delete(k) : n.add(k); setExpSel(n); };
                     const toggleAll = () => { if (allSelected) setExpSel(new Set()); else setExpSel(new Set(filledKeys)); };
 
                     /* Build column definitions */
-                    const allCols = [];
+                    const allCols: ColDef[] = [];
                     if (hasSubs) {
                       (cat.subcategories||[]).forEach(sc => allCols.push({
                         id:`sub:${sc.id}`, label:sc.name, w:100, align:"right",
@@ -539,12 +568,12 @@ export default function BudgetApp() {
 
                     /* Apply stored column order */
                     const storedOrder = cat.colOrder || [];
-                    const cols = storedOrder.length > 0
-                      ? storedOrder.map(id => allCols.find(c => c.id === id)).filter(Boolean).concat(allCols.filter(c => !storedOrder.includes(c.id)))
+                    const cols: ColDef[] = storedOrder.length > 0
+                      ? storedOrder.map(id => allCols.find(c => c.id === id)).filter((c): c is ColDef => !!c).concat(allCols.filter(c => !storedOrder.includes(c.id)))
                       : allCols;
 
-                    let colDragFrom = null;
-                    const colStyle = (c) => ({ width:c.w, flex:c.flex, minWidth:c.minW, textAlign:c.align, fontWeight:c.bold?700:undefined });
+                    let colDragFrom: number | null = null;
+                    const colStyle = (c: ColDef): React.CSSProperties => ({ width:c.w, flex:c.flex, minWidth:c.minW, textAlign: c.align as React.CSSProperties['textAlign'], fontWeight:c.bold?700:undefined });
 
                     return <>
                       {expSel.size > 0 && (
@@ -582,7 +611,7 @@ export default function BudgetApp() {
                         {MONTHS.map((mName, mi) => {
                           const key = mk(expYear, mi);
                           const entry = expenses?.[cat.id]?.[key] || null;
-                          const hasData = hasSubs ? (entry && ((cat.subcategories||[]).some(sc=>entry.subAmounts?.[sc.id]>0)||entry.amount>0)) : !!entry;
+                          const hasData = hasSubs ? (entry && ((cat.subcategories||[]).some(sc=>(entry.subAmounts?.[sc.id]??0)>0)||entry.amount>0)) : !!entry;
                           const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
                           const isCurrent = expYear === getCY() && mi === getCM();
                           const isSel = expSel.has(key);
@@ -787,7 +816,7 @@ export default function BudgetApp() {
                 onDelete={()=>{delExp(modal.catId,modal.monthKey);flash("Deleted!");setModal(null);}}
                 onReorderSubs={(newSubs)=>{
                   const ci = categories.findIndex(c=>c.id===modal.catId);
-                  if(ci>=0) updateCategory(ci,{subcategories:newSubs},true);
+                  if(ci>=0) updateCategory(ci,{subcategories:newSubs});
                 }}
                 onClose={()=>setModal(null)} />
             )}
@@ -800,7 +829,7 @@ export default function BudgetApp() {
                     addCategory(catData);
                     setCatIdx(categories.length);
                     flash("Category added!");
-                  } else {
+                  } else if (modal.type==="editCat") {
                     const oldSubIds = new Set((modal.cat.subcategories||[]).map(s=>s.id));
                     const newSubIds = new Set((catData.subcategories||[]).map(s=>s.id));
                     const removedIds = [...oldSubIds].filter(id=>!newSubIds.has(id));
@@ -829,18 +858,18 @@ export default function BudgetApp() {
               </div>
             )}
             {(modal.type==="addFixedIncome"||modal.type==="editFixedIncome") && (
-              <FixedIncomeModal src={modal.src||null}
+              <FixedIncomeModal src={modal.type==="editFixedIncome"?modal.src:null}
                 onSave={(src)=>{
                   if(modal.type==="addFixedIncome") addFixedIncome(src);
-                  else updateFixedIncome(modal.idx, src);
+                  else if(modal.type==="editFixedIncome") updateFixedIncome(modal.idx, src);
                   flash("Saved!");setModal(null);
                 }} onClose={()=>setModal(null)} />
             )}
             {(modal.type==="addVarIncome"||modal.type==="editVarIncome") && (
-              <VarIncomeModal item={modal.item||null}
+              <VarIncomeModal item={modal.type==="editVarIncome"?modal.item:null}
                 onSave={(item)=>{
                   if(modal.type==="addVarIncome") addVarIncome(item);
-                  else updateVarIncome(variableIncomes.findIndex(v=>v.id===modal.item.id), item);
+                  else if(modal.type==="editVarIncome") updateVarIncome(variableIncomes.findIndex(v=>v.id===modal.item.id), item);
                   flash("Saved!");setModal(null);
                 }} onClose={()=>setModal(null)} />
             )}

@@ -14,6 +14,22 @@ import { mk, MONTHS } from '../../utils/dates';
 import { fmt } from '../../utils/formatters';
 import { CHART_COLORS } from '../../constants';
 import S from '../../styles/shared';
+import type { Category, Expenses } from '../../types';
+
+interface BudgetViewProps {
+  year: number;
+  setYear: (y: number) => void;
+  categories: Category[];
+  expenses: Expenses;
+  getFixedIncomeForMonth: (monthKey: string) => number;
+  getVarIncomeForMonth: (monthKey: string) => number;
+  getTotalExpensesForMonth: (monthKey: string) => number;
+  getPaidExpForMonth: (monthKey: string) => number;
+  getAnticipatedExpForMonth: (monthKey: string) => number;
+  getCatPaidForMonth: (catId: string, monthKey: string) => number;
+  getExp: (catId: string, key: string) => { amount: number } | null;
+  dark: boolean;
+}
 
 const BREAKDOWN_VIEWS = [
   {id:"pie",label:"Pie Chart"},{id:"concentric",label:"Concentric Diagram"},
@@ -30,13 +46,13 @@ const TREND_VIEWS = [
   {id:"stream",label:"Stream Graph"},{id:"bump-area",label:"Bump Area Chart"},
 ];
 
-export default function BudgetView({ year, setYear, categories, expenses, getFixedIncomeForMonth, getVarIncomeForMonth, getTotalExpensesForMonth, getPaidExpForMonth, getAnticipatedExpForMonth, getCatPaidForMonth, getExp, dark }) {
+export default function BudgetView({ year, setYear, categories, expenses, getFixedIncomeForMonth, getVarIncomeForMonth, getTotalExpensesForMonth, getPaidExpForMonth, getAnticipatedExpForMonth, getCatPaidForMonth, getExp, dark }: BudgetViewProps) {
   const [breakdownView, setBreakdownView] = useState("circular");
   const [trendView, setTrendView] = useState("stacked-bar");
-  const [selectedCats, setSelectedCats] = useState([]); // empty = all categories
-  const [hiddenBkdCats, setHiddenBkdCats] = useState(new Set());
-  const toggleCat = (name) => setSelectedCats(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
-  const toggleBkdCat = (name) => setHiddenBkdCats(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
+  const [selectedCats, setSelectedCats] = useState<string[]>([]); // empty = all categories
+  const [hiddenBkdCats, setHiddenBkdCats] = useState<Set<string>>(new Set());
+  const toggleCat = (name: string) => setSelectedCats(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
+  const toggleBkdCat = (name: string) => setHiddenBkdCats(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
   const cc = { accent: dark?"#68C0A4":"#1A9E76", red: dark?"#F06B5E":"#D4453A", amber: dark?"#F5C542":"#C8850A",
     grid: dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)", tick: dark?"#6A6A72":"#9A9AA0", anticipated: dark?"#C8850A":"#F2C8A0",
     green: dark?"#68C0A4":"#1A9E76" };
@@ -63,8 +79,8 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   }).filter(d => d.value > 0);
   const activeCatBreakdown = catBreakdown.filter(d => !hiddenBkdCats.has(d.name));
 
-  const catTrendData = MONTHS.map((mName, mi) => {
-    const row = { month: mName };
+  const catTrendData: Record<string, number | string>[] = MONTHS.map((mName, mi) => {
+    const row: Record<string, number | string> = { month: mName };
     categories.forEach(c => { row[c.name] = getCatPaidForMonth(c.id, mk(year, mi)); });
     return row;
   });
@@ -72,12 +88,12 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   const activeCats = selectedCats.length === 0 ? categories : categories.filter(c => selectedCats.includes(c.name));
 
   const tipCSS = {borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"};
-  const viewSelect = (val, set, views) => <ViewSelect value={val} onChange={set} options={views} dark={dark} />;
+  const viewSelect = (val: string, set: (v: string) => void, views: {id: string; label: string}[]) => <ViewSelect value={val} onChange={set} options={views} dark={dark} />;
 
   const renderBreakdownChart = () => {
     const visibleCatBreakdown = activeCatBreakdown; // use filter-aware data
     if(!visibleCatBreakdown.length) return <div style={{color:"var(--text-muted,#888)",textAlign:"center",padding:"40px 0",fontSize:13}}>{hiddenBkdCats.size>0?"All categories hidden":"No paid expenses for "+year}</div>;
-    const tip = <Tooltip cursor={false} animationDuration={200} formatter={v=>fmt(v)} contentStyle={tipCSS} itemStyle={{color:"var(--tooltip-text)"}} labelStyle={{color:"var(--tooltip-text)"}}/>;
+    const tip = <Tooltip cursor={false} animationDuration={200} formatter={(v: number) => fmt(v)} contentStyle={tipCSS} itemStyle={{color:"var(--tooltip-text)"}} labelStyle={{color:"var(--tooltip-text)"}}/>;
     if(breakdownView==="pie")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
     if(breakdownView==="circular") return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
     if(breakdownView==="fan")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="76%" startAngle={180} endAngle={0} innerRadius={36} outerRadius={92} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
@@ -98,7 +114,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
     if(breakdownView==="windrose") return (
       <ResponsiveContainer width="100%" height={210}>
         <RadialBarChart cx="50%" cy="50%" innerRadius="8%" outerRadius="88%" data={visibleCatBreakdown.map(d=>({...d,fill:d.color}))}>
-          <RadialBar minAngle={15} background clockWise dataKey="value">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</RadialBar>
+          <RadialBar {...{minAngle:15} as any} background clockWise dataKey="value">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</RadialBar>
           {tip}
         </RadialBarChart>
       </ResponsiveContainer>
@@ -111,16 +127,16 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   };
 
   const renderTrendChart = () => {
-    const tipProps = {animationDuration:200,formatter:v=>fmt(v),contentStyle:tipCSS};
-    const col = c => CHART_COLORS[categories.indexOf(c)%CHART_COLORS.length];
+    const tipProps = {animationDuration:200,formatter:(v: number) => fmt(v),contentStyle:tipCSS};
+    const col = (c: Category) => CHART_COLORS[categories.indexOf(c)%CHART_COLORS.length];
     const commonAxes = (vert=false) => vert
       ? <><CartesianGrid strokeDasharray="3 3" stroke={cc.grid} horizontal={false}/>
-          <XAxis type="number" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`}/>
+          <XAxis type="number" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`}/>
           <YAxis type="category" dataKey="month" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} width={30}/>
           <Tooltip {...tipProps} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)"}}/></>
       : <><CartesianGrid strokeDasharray="3 3" stroke={cc.grid}/>
           <XAxis dataKey="month" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false}/>
-          <YAxis tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`}/>
+          <YAxis tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`}/>
           <Tooltip {...tipProps} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}}/></>;
 
     if(trendView==="line"||trendView==="spline"||trendView==="step-line") {
@@ -131,7 +147,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
       const offset=trendView==="stream"?"wiggle":"none";
       return (
         <ResponsiveContainer width="100%" height={210}>
-          <AreaChart data={catTrendData} stackOffset={offset}>
+          <AreaChart data={catTrendData} stackOffset={offset as "none" | "wiggle"}>
             <defs>{activeCats.map(c=>{const cl=col(c);return <linearGradient key={c.id} id={`ag_${c.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={cl} stopOpacity={0.75}/><stop offset="95%" stopColor={cl} stopOpacity={0.12}/></linearGradient>;})}</defs>
             {commonAxes()}<Legend wrapperStyle={{fontSize:11}}/>
             {activeCats.map(c=><Area key={c.id} type="monotone" dataKey={c.name} stackId="a" stroke={col(c)} fill={`url(#ag_${c.id})`} strokeWidth={1.5}/>)}
@@ -160,11 +176,11 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
       return (
         <ResponsiveContainer width="100%" height={210}>
           <Treemap data={tmData} dataKey="size" stroke="none" animationDuration={300}
-            content={({x,y,width,height,name,color:clr,depth})=>{
+            content={(({x,y,width,height,name,color:clr,depth}: any)=>{
               if(!width||!height||width<3||height<3||depth===0) return null;
               const rx=isConvex?10:2,pad=isConvex?3:1;
               return <g><rect x={x+pad} y={y+pad} width={width-pad*2} height={height-pad*2} rx={rx} ry={rx} fill={clr}/>{width>55&&height>28&&<text x={x+width/2} y={y+height/2} textAnchor="middle" dominantBaseline="middle" fontSize={11} fontWeight="600" fill="#fff">{name}</text>}</g>;
-            }}
+            }) as any}
           />
         </ResponsiveContainer>
       );
@@ -173,8 +189,8 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
       const n=activeCats.length;
       if(!n) return null;
       const rankData=MONTHS.map((mName,mi)=>{
-        const row={month:mName};
-        const vals=activeCats.map(c=>({name:c.name,v:catTrendData[mi]?.[c.name]||0})).sort((a,b)=>b.v-a.v);
+        const row: Record<string, number | string>={month:mName};
+        const vals=activeCats.map(c=>({name:c.name,v:(catTrendData[mi]?.[c.name] as number)||0})).sort((a,b)=>b.v-a.v);
         vals.forEach((v,ri)=>{row[v.name]=ri+1;});
         activeCats.forEach(c=>{if(row[c.name]===undefined) row[c.name]=n;});
         return row;
@@ -184,8 +200,8 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
           <LineChart data={rankData}>
             <CartesianGrid strokeDasharray="3 3" stroke={cc.grid}/>
             <XAxis dataKey="month" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false}/>
-            <YAxis reversed domain={[1,n||1]} tickCount={n} tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={v=>`#${v}`}/>
-            <Tooltip {...tipProps} formatter={(v,name)=>[`Rank #${v}`,name]}/>
+            <YAxis reversed domain={[1,n||1]} tickCount={n} tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>`#${v}`}/>
+            <Tooltip {...tipProps} formatter={(v: number,name: string)=>[`Rank #${v}`,name]}/>
             <Legend wrapperStyle={{fontSize:11}}/>
             {activeCats.map(c=><Line key={c.id} type="monotone" dataKey={c.name} stroke={col(c)} strokeWidth={3} dot={{r:4,fill:col(c)}}/>)}
           </LineChart>
@@ -198,9 +214,9 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   return (
     <div style={{animation:"fadeIn .35s"}}>
       <div style={{...S.yearNav,marginBottom:24}}>
-        <button onClick={()=>setYear(y=>y-1)} className="year-btn-h" style={S.yearBtn}>◂</button>
+        <button onClick={()=>setYear(year-1)} className="year-btn-h" style={S.yearBtn}>◂</button>
         <span style={S.yearLabel}>{year}</span>
-        <button onClick={()=>setYear(y=>y+1)} className="year-btn-h" style={S.yearBtn}>▸</button>
+        <button onClick={()=>setYear(year+1)} className="year-btn-h" style={S.yearBtn}>▸</button>
       </div>
 
       <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:14,marginBottom:28}}>
@@ -226,14 +242,14 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
               <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
               <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
               <XAxis dataKey="month" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} />
-              <YAxis tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
-              <Tooltip cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} animationDuration={200} content={({active,payload,label})=>{
+              <YAxis tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
+              <Tooltip cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} animationDuration={200} content={({active,payload,label}: any)=>{
                 if(!active||!payload?.length) return null;
                 const d = monthlyData.find(x=>x.month===label);
                 return (
                   <div style={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",padding:"12px 16px",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
                     <div style={{fontWeight:600,marginBottom:6}}>{label}</div>
-                    {payload.map((p,i)=>(
+                    {payload.map((p: any,i: number)=>(
                       <div key={i} style={{display:"flex",justifyContent:"space-between",gap:16,marginBottom:2}}>
                         <span style={{display:"flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:2,background:p.fill}}/>{p.name}</span>
                         <span style={{fontWeight:600}}>{fmt(p.value)}</span>
@@ -247,9 +263,9 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
                 );
               }} />
               <Legend wrapperStyle={{fontSize:12}} />
-              <Bar dataKey="totalIncome" name="Income" fill={cc.accent} radius={[5,5,0,0]} shape={p=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={p=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
-              <Bar dataKey="paid" name="Paid" stackId="exp" fill={cc.red} shape={p=><Bar3D {...p} isActive={false} radius={[0,0,0,0]}/>} activeBar={p=><Bar3D {...p} isActive={true} radius={[0,0,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
-              <Bar dataKey="anticipated" name="Anticipated" stackId="exp" fill={cc.anticipated} radius={[5,5,0,0]} shape={p=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={p=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(245,197,66,0.4)":"rgba(212,160,48,0.35)"}/>} />
+              <Bar dataKey="totalIncome" name="Income" fill={cc.accent} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
+              <Bar dataKey="paid" name="Paid" stackId="exp" fill={cc.red} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[0,0,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[0,0,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
+              <Bar dataKey="anticipated" name="Anticipated" stackId="exp" fill={cc.anticipated} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(245,197,66,0.4)":"rgba(212,160,48,0.35)"}/>} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -265,8 +281,8 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
               <XAxis dataKey="month" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} />
-              <YAxis tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
-              <Tooltip cursor={{stroke:dark?"rgba(104,192,164,0.3)":"rgba(26,158,118,0.3)",strokeWidth:1,strokeDasharray:"4 4"}} animationDuration={200} formatter={v=>fmt(v)} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} />
+              <YAxis tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
+              <Tooltip cursor={{stroke:dark?"rgba(104,192,164,0.3)":"rgba(26,158,118,0.3)",strokeWidth:1,strokeDasharray:"4 4"}} animationDuration={200} formatter={(v: number)=>fmt(v)} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} />
               <Area type="monotone" dataKey="balance" stroke={cc.accent} strokeWidth={2} fill="url(#balG)" name="Balance" />
             </AreaChart>
           </ResponsiveContainer>
