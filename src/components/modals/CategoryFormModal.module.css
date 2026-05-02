@@ -1,0 +1,75 @@
+.modalContent {
+  background: var(--modal-bg);
+  border-radius: 24px;
+  padding: 30px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px var(--shadow-lg), 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  -webkit-overflow-scrolling: touch;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+}
+
+.modalTitle {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.3px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btnSmall {
+  background: none;
+  border: 1px solid var(--border-input);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 34px;
+  transition: all 0.2s;
+}
+
+.btnGhostModal {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border-input);
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 15px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  min-height: 44px;
+  transition: all 0.25s;
+}
+
+.btnPrimary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.25s;
+  min-height: 44px;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}

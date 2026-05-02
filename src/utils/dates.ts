@@ -1,0 +1,13 @@
+export const CY: number = new Date().getFullYear();
+export const CM: number = new Date().getMonth();
+export const getCY = (): number => new Date().getFullYear();
+export const getCM = (): number => new Date().getMonth();
+export const MIN_YEAR: number = 2025;
+export const MONTHS: readonly string[] = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+export const mk = (y: number, m: number): string => `${y}-${String(m + 1).padStart(2, "0")}`;
+export const parseMk = (k: string): { y: number; m: number } => { const [y, m] = k.split("-"); return { y: +y, m: +m - 1 }; };
+export const uid = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+export const today = (): string => new Date().toISOString().split("T")[0];
+export const fmtDate = (d: string): string => { if (!d) return ""; const [y,m,dd] = d.split("-"); return `${dd}/${m}/${y}`; };
+export const parseEuDate = (s: string): string => { if (!s) return ""; const p = s.replace(/[.\-]/g,"/").split("/"); if (p.length!==3) return ""; const [dd,mm,yy]=p; const iso=`${yy.padStart(4,"0")}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?iso:""; };
+export const todayEu = (): string => fmtDate(today());

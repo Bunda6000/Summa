@@ -4,9 +4,13 @@
  * falls back to localStorage for web/dev.
  */
 
-let preferences = null;
+import type { Preferences as CapPreferences } from '@capacitor/preferences';
 
-async function initPreferences() {
+type PreferencesPlugin = typeof CapPreferences;
+
+let preferences: PreferencesPlugin | false | null = null;
+
+async function initPreferences(): Promise<void> {
   if (preferences !== null) return;
   try {
     const mod = await import('@capacitor/preferences');
@@ -16,22 +20,22 @@ async function initPreferences() {
   }
 }
 
-export async function loadStore(key, fallback) {
+export async function loadStore<T>(key: string, fallback: T): Promise<T> {
   await initPreferences();
   try {
     if (preferences) {
       const { value } = await preferences.get({ key });
-      return value ? JSON.parse(value) : fallback;
+      return value ? (JSON.parse(value) as T) : fallback;
     } else {
       const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
+      return raw ? (JSON.parse(raw) as T) : fallback;
     }
   } catch {
     return fallback;
   }
 }
 
-export async function saveStore(key, val) {
+export async function saveStore<T>(key: string, val: T): Promise<void> {
   await initPreferences();
   const str = JSON.stringify(val);
   try {
@@ -45,7 +49,7 @@ export async function saveStore(key, val) {
   }
 }
 
-export async function removeStore(key) {
+export async function removeStore(key: string): Promise<void> {
   await initPreferences();
   try {
     if (preferences) {
