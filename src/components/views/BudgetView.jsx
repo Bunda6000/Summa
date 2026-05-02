@@ -10,7 +10,7 @@ import SunburstChart from '../charts/SunburstChart';
 import MarimekoChart from '../charts/MarimekoChart';
 import BarcodeChart from '../charts/BarcodeChart';
 import Bar3D from '../charts/Bar3D';
-import { mk, MONTHS, getCY, getCM } from '../../utils/dates';
+import { mk, MONTHS } from '../../utils/dates';
 import { fmt } from '../../utils/formatters';
 import { CHART_COLORS } from '../../constants';
 import S from '../../styles/shared';
@@ -75,18 +75,18 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   const viewSelect = (val, set, views) => <ViewSelect value={val} onChange={set} options={views} dark={dark} />;
 
   const renderBreakdownChart = () => {
-    const catBreakdown = activeCatBreakdown; // use filter-aware data
-    if(!catBreakdown.length) return <div style={{color:"var(--text-muted,#888)",textAlign:"center",padding:"40px 0",fontSize:13}}>{hiddenBkdCats.size>0?"All categories hidden":"No paid expenses for "+year}</div>;
+    const visibleCatBreakdown = activeCatBreakdown; // use filter-aware data
+    if(!visibleCatBreakdown.length) return <div style={{color:"var(--text-muted,#888)",textAlign:"center",padding:"40px 0",fontSize:13}}>{hiddenBkdCats.size>0?"All categories hidden":"No paid expenses for "+year}</div>;
     const tip = <Tooltip cursor={false} animationDuration={200} formatter={v=>fmt(v)} contentStyle={tipCSS} itemStyle={{color:"var(--tooltip-text)"}} labelStyle={{color:"var(--tooltip-text)"}}/>;
-    if(breakdownView==="pie")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={catBreakdown} cx="50%" cy="50%" outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">{catBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
-    if(breakdownView==="circular") return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={catBreakdown} cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3} dataKey="value" stroke="none">{catBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
-    if(breakdownView==="fan")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={catBreakdown} cx="50%" cy="76%" startAngle={180} endAngle={0} innerRadius={36} outerRadius={92} dataKey="value" stroke="none">{catBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
+    if(breakdownView==="pie")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
+    if(breakdownView==="circular") return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
+    if(breakdownView==="fan")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="76%" startAngle={180} endAngle={0} innerRadius={36} outerRadius={92} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
     if(breakdownView==="concentric") {
-      const tot=catBreakdown.reduce((s,d)=>s+d.value,0),n=catBreakdown.length,rW=Math.min(20,72/Math.max(n,1));
+      const tot=visibleCatBreakdown.reduce((s,d)=>s+d.value,0),n=visibleCatBreakdown.length,rW=Math.min(20,72/Math.max(n,1));
       return (
         <ResponsiveContainer width="100%" height={210}>
           <PieChart>
-            {catBreakdown.map((d,i)=>{
+            {visibleCatBreakdown.map((d,i)=>{
               const r1=14+i*(rW+3),r2=r1+rW,prop=d.value/tot;
               return <Pie key={d.name} data={[{v:prop},{v:1-prop}]} dataKey="v" cx="50%" cy="50%" innerRadius={r1} outerRadius={r2} startAngle={90} endAngle={-270} stroke="none" paddingAngle={0}><Cell fill={d.color}/><Cell fill={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"}/></Pie>;
             })}
@@ -97,16 +97,16 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
     }
     if(breakdownView==="windrose") return (
       <ResponsiveContainer width="100%" height={210}>
-        <RadialBarChart cx="50%" cy="50%" innerRadius="8%" outerRadius="88%" data={catBreakdown.map(d=>({...d,fill:d.color}))}>
-          <RadialBar minAngle={15} background clockWise dataKey="value">{catBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</RadialBar>
+        <RadialBarChart cx="50%" cy="50%" innerRadius="8%" outerRadius="88%" data={visibleCatBreakdown.map(d=>({...d,fill:d.color}))}>
+          <RadialBar minAngle={15} background clockWise dataKey="value">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</RadialBar>
           {tip}
         </RadialBarChart>
       </ResponsiveContainer>
     );
-    if(breakdownView==="nightingale") return <NightingaleChart data={catBreakdown} dark={dark}/>;
-    if(breakdownView==="sunburst")    return <SunburstChart catBreakdown={catBreakdown} catTrendData={catTrendData} dark={dark}/>;
-    if(breakdownView==="marimeko")    return <MarimekoChart data={catBreakdown}/>;
-    if(breakdownView==="barcode")     return <BarcodeChart data={catBreakdown} dark={dark}/>;
+    if(breakdownView==="nightingale") return <NightingaleChart data={visibleCatBreakdown} dark={dark}/>;
+    if(breakdownView==="sunburst")    return <SunburstChart catBreakdown={visibleCatBreakdown} catTrendData={catTrendData} dark={dark}/>;
+    if(breakdownView==="marimeko")    return <MarimekoChart data={visibleCatBreakdown}/>;
+    if(breakdownView==="barcode")     return <BarcodeChart data={visibleCatBreakdown} dark={dark}/>;
     return null;
   };
 
