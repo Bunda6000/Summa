@@ -2,10 +2,21 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { StateCreator } from 'zustand';
 import { loadStore, saveStore } from '../storage';
+import { supabase } from '../lib/supabase';
 import { defaultData } from '../constants';
 import { uid, today, mk, parseMk, getCY } from '../utils/dates';
 import { reorder } from '../utils/expressions';
 import type { AppData, LoanType, FixedIncome, VariableIncome, Category, ExpenseEntry } from '../types';
+
+let _cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleCloudSync(userId: string, data: AppData) {
+  if (_cloudSyncTimer) clearTimeout(_cloudSyncTimer);
+  _cloudSyncTimer = setTimeout(async () => {
+    const { error } = await supabase.from('user_data').upsert({ user_id: userId, data });
+    if (error) console.warn('[Summa] Cloud sync failed:', error.message);
+  }, 2000);
+}
 
 interface BudgetState {
   // ── State ──
@@ -15,7 +26,9 @@ interface BudgetState {
   _initializing: boolean;
 
   // ── Init ──
-  initStore: () => Promise<void>;
+  userId: string | null;
+  initStore: (userId: string) => Promise<void>;
+  resetStore: () => void;
 
   // ── Persistence helper ──
   _save: (nextData: AppData) => void;
@@ -72,24 +85,33 @@ interface BudgetState {
 
 const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector', never]], []> = (set, get) => ({
   // ── State ──
+  userId: null,
   appData: null,
   dark: false,
   initialized: false,
   _initializing: false,
 
   // ── Init ──
-  initStore: async () => {
+  initStore: async (userId: string) => {
     if (get().initialized || get()._initializing) return;
-    set({ _initializing: true });
+    set({ _initializing: true, userId });
+    const localKey = `budget-app-v2-${userId}`;
     try {
-      const [storedDark, loaded] = await Promise.all([
+      const [storedDark, localData] = await Promise.all([
         loadStore('budget-dark-mode', false),
-        loadStore('budget-app-v2', defaultData()),
+        loadStore(localKey, null as AppData | null),
       ]);
-      if ((loaded._schemaVersion ?? 0) >= 2) {
-        // already migrated — skip
+
+      // Try to fetch cloud data; prefer it if no local data exists
+      let loaded: AppData;
+      const { data: cloudRow } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle();
+      if (cloudRow?.data && !localData) {
+        loaded = cloudRow.data as AppData;
       } else {
-        // Migration: ensure protected Loans category exists
+        loaded = localData ?? defaultData();
+      }
+
+      if ((loaded._schemaVersion ?? 0) < 2) {
         const hasLoans = loaded.categories?.some(c => c.id === 'loans');
         if (!hasLoans) {
           loaded.categories = [...(loaded.categories || []), { id: 'loans', name: 'Loans', maxYears: 35, protected: true, fields: [], subcategories: [], colOrder: [] }];
@@ -100,27 +122,35 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
         }
         if (!loaded.loanTypes) loaded.loanTypes = [];
         if (!loaded.loanPaid) loaded.loanPaid = {};
-        // Migration: ensure all categories have subcategories + colOrder arrays
         loaded.categories = loaded.categories.map(c => ({
           ...c, subcategories: c.subcategories || [], colOrder: c.colOrder || []
         }));
         loaded._schemaVersion = 2;
       }
-      saveStore('budget-app-v2', loaded);
-      set({ appData: loaded, dark: storedDark, initialized: true });
-      // Sync initial data-theme attribute (one-time side-effect; subscriber wired in Phase 1c)
+
+      saveStore(localKey, loaded);
+      set({ appData: loaded, dark: storedDark, initialized: true, _initializing: false });
       document.documentElement.dataset.theme = storedDark ? 'dark' : 'light';
     } catch (e) {
       console.error('[useBudgetStore] initStore failed:', e);
-      set({ _initializing: false }); // allow retry
+      set({ _initializing: false });
       throw e;
     }
   },
 
+  resetStore: () => {
+    if (_cloudSyncTimer) { clearTimeout(_cloudSyncTimer); _cloudSyncTimer = null; }
+    set({ appData: null, initialized: false, _initializing: false, userId: null });
+  },
+
   // ── Persistence helper ──
   _save: (nextData: AppData) => {
+    const { userId } = get();
     set({ appData: nextData });
-    saveStore('budget-app-v2', nextData);
+    if (userId) {
+      saveStore(`budget-app-v2-${userId}`, nextData);
+      scheduleCloudSync(userId, nextData);
+    }
   },
 
   // ── Theme ──
