@@ -30,6 +30,7 @@
   font-weight: 600;
   color: var(--text2);
   letter-spacing: 0.2px;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .input {
