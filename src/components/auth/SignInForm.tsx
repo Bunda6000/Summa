@@ -25,7 +25,7 @@ export default function SignInForm({ onSwitchToSignUp }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className={styles.form} noValidate>
-      <h1 className={styles.title}>Sign in</h1>
+      <h1 className={styles.title}>Sign in, Please</h1>
 
       <div className={styles.field}>
         <label htmlFor="signin-email" className={styles.label}>Email</label>
