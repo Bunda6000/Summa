@@ -23,7 +23,7 @@ export default function ResetErrorPanel({ error, onDismiss }: Props) {
 
   return (
     <form onSubmit={handleResend} className={styles.form} noValidate>
-      <h1 className={styles.title}>Reset link invalid</h1>
+      <h1 className={styles.title}>Reset link expired</h1>
 
       <p className={styles.hint} style={{ fontSize: 14, color: 'var(--text2)' }}>
         {error}

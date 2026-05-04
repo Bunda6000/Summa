@@ -30,7 +30,7 @@ beforeEach(() => {
 describe('ResetErrorPanel', () => {
   it('displays the expired error message', () => {
     render(<ResetErrorPanel error={EXPIRED_MSG} onDismiss={vi.fn()} />);
-    expect(screen.getByText(/expired/i)).toBeInTheDocument();
+    expect(screen.getByText(EXPIRED_MSG)).toBeInTheDocument();
   });
 
   it('calls requestPasswordReset when resend form submitted with email', async () => {
