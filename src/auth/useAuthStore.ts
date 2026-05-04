@@ -77,7 +77,11 @@ const useAuthStore = create<AuthState>((set, get) => ({
     const errorCode = params.get('error_code');
     const error = params.get('error');
 
-    if (errorCode === 'otp_expired' || errorCode === 'otp_disabled') {
+    if (errorCode === 'otp_expired' && sessionStorage.getItem('summa_reset_pending') === '1') {
+      sessionStorage.removeItem('summa_reset_pending');
+      set({ resetError: 'The password reset link has expired. Please request a new one.' });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (errorCode === 'otp_expired' || errorCode === 'otp_disabled') {
       set({ verificationError: 'The verification link has expired. Please request a new one.' });
       window.history.replaceState({}, '', window.location.pathname);
     } else if (error === 'access_denied') {
@@ -90,6 +94,9 @@ const useAuthStore = create<AuthState>((set, get) => ({
     set({ session });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        set({ recoveryMode: true });
+      }
       set({ session });
     });
 

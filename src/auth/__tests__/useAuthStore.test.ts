@@ -254,3 +254,57 @@ describe('useAuthStore.updatePassword', () => {
     expect(useAuthStore.getState().recoveryMode).toBe(true);
   });
 });
+
+describe('useAuthStore.initAuth — reset error detection', () => {
+  it('sets resetError when URL has otp_expired and summa_reset_pending flag', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as never);
+    sessionStorage.setItem('summa_reset_pending', '1');
+    vi.stubGlobal('location', {
+      search: '?error_code=otp_expired&error=access_denied',
+      pathname: '/',
+      href: 'http://localhost/',
+    });
+
+    await useAuthStore.getState().initAuth();
+
+    expect(useAuthStore.getState().resetError).toMatch(/expired/i);
+    expect(useAuthStore.getState().verificationError).toBeNull();
+    expect(sessionStorage.getItem('summa_reset_pending')).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it('sets verificationError (not resetError) when otp_expired without the sessionStorage flag', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as never);
+    sessionStorage.removeItem('summa_reset_pending');
+    vi.stubGlobal('location', {
+      search: '?error_code=otp_expired',
+      pathname: '/',
+      href: 'http://localhost/',
+    });
+
+    await useAuthStore.getState().initAuth();
+
+    expect(useAuthStore.getState().verificationError).toMatch(/expired/i);
+    expect(useAuthStore.getState().resetError).toBeNull();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('useAuthStore.initAuth — PASSWORD_RECOVERY event', () => {
+  it('sets recoveryMode when PASSWORD_RECOVERY fires via onAuthStateChange', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as never);
+    vi.stubGlobal('location', { search: '', pathname: '/', href: 'http://localhost/' });
+
+    let capturedCallback: ((event: string, session: unknown) => void) | null = null;
+    vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
+      capturedCallback = cb as never;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as never;
+    });
+
+    await useAuthStore.getState().initAuth();
+    capturedCallback!('PASSWORD_RECOVERY', null);
+
+    expect(useAuthStore.getState().recoveryMode).toBe(true);
+    vi.unstubAllGlobals();
+  });
+});
