@@ -10,12 +10,16 @@ const RATE_LIMIT_PHRASES = ['rate limit', 'too many', 'email rate limit'];
 
 // Read URL error params at module load time — before Supabase's async _initialize()
 // can call history.replaceState() and erase them.
+let _initialResetError: string | null = null;
 let _initialVerificationError: string | null = null;
 if (typeof window !== 'undefined') {
   const _p = new URLSearchParams(window.location.search);
   const _code = _p.get('error_code');
   const _err = _p.get('error');
-  if (_code === 'otp_expired' || _code === 'otp_disabled') {
+  if (_code === 'otp_expired' && sessionStorage.getItem('summa_reset_pending') === '1') {
+    sessionStorage.removeItem('summa_reset_pending');
+    _initialResetError = 'The password reset link has expired. Please request a new one.';
+  } else if (_code === 'otp_expired' || _code === 'otp_disabled') {
     _initialVerificationError = 'The verification link has expired. Please request a new one.';
   } else if (_err === 'access_denied') {
     const desc = _p.get('error_description') ?? 'Verification failed.';
@@ -33,6 +37,8 @@ interface AuthState {
   resendCount: number;
   resendCooldownUntil: number | null;
   verificationError: string | null;
+  recoveryMode: boolean;
+  resetError: string | null;
 
   initAuth: () => Promise<() => void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -41,6 +47,9 @@ interface AuthState {
   resendVerification: (email: string) => Promise<void>;
   clearError: () => void;
   clearVerificationError: () => void;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
+  clearResetError: () => void;
 }
 
 const isRateLimitError = (msg: string) =>
@@ -58,6 +67,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
   // Primary: set from module-level URL capture before Supabase can erase params.
   // Also detected in initAuth as fallback for test environments.
   verificationError: _initialVerificationError,
+  recoveryMode: false,
+  resetError: _initialResetError,
 
   initAuth: async () => {
     // Fallback URL detection — handles test environments where vi.stubGlobal
@@ -177,8 +188,28 @@ const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: false, info: 'Verification email sent! Check your inbox.', resendCount: resendCount + 1 });
   },
 
+  requestPasswordReset: async (email) => {
+    set({ loading: true, error: null, info: null });
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    sessionStorage.setItem('summa_reset_pending', '1');
+    set({ loading: false, info: 'If an account with that email exists, a reset link has been sent.' });
+  },
+
+  updatePassword: async (password) => {
+    set({ loading: true, error: null });
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      set({ loading: false, error: error.message });
+      return;
+    }
+    set({ loading: false, recoveryMode: false });
+  },
+
   clearError: () => set({ error: null, info: null }),
   clearVerificationError: () => set({ verificationError: null }),
+  clearResetError: () => set({ resetError: null }),
 }));
 
 export default useAuthStore;

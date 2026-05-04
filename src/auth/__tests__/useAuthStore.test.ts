@@ -9,6 +9,8 @@ vi.mock('../../lib/supabase', () => ({
       signOut: vi.fn(),
       getSession: vi.fn(),
       resend: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updateUser: vi.fn(),
       onAuthStateChange: vi.fn(() => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
@@ -23,6 +25,8 @@ const mockSignUp = vi.mocked(supabase.auth.signUp);
 const mockSignIn = vi.mocked(supabase.auth.signInWithPassword);
 const mockSignOut = vi.mocked(supabase.auth.signOut);
 const mockResend = vi.mocked(supabase.auth.resend);
+const mockResetPasswordForEmail = vi.mocked(supabase.auth.resetPasswordForEmail);
+const mockUpdateUser = vi.mocked(supabase.auth.updateUser);
 
 const fakeSession = {
   user: { id: 'user-123', email: 'user@example.com' },
@@ -32,6 +36,7 @@ const fakeSession = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
   useAuthStore.setState({
     session: null,
     loading: false,
@@ -42,6 +47,8 @@ beforeEach(() => {
     resendCount: 0,
     resendCooldownUntil: null,
     verificationError: null,
+    recoveryMode: false,
+    resetError: null,
   });
 });
 
@@ -197,5 +204,52 @@ describe('useAuthStore.initAuth — URL error detection', () => {
 
     expect(useAuthStore.getState().verificationError).toBeNull();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('useAuthStore.requestPasswordReset', () => {
+  it('calls resetPasswordForEmail with email and current origin', async () => {
+    mockResetPasswordForEmail.mockResolvedValue({ data: {}, error: null } as never);
+    await useAuthStore.getState().requestPasswordReset('user@example.com');
+    expect(mockResetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
+      redirectTo: window.location.origin,
+    });
+  });
+
+  it('sets generic info message even when Supabase returns an error', async () => {
+    mockResetPasswordForEmail.mockResolvedValue({ data: {}, error: { message: 'User not found' } } as never);
+    await useAuthStore.getState().requestPasswordReset('nobody@example.com');
+    expect(useAuthStore.getState().info).toMatch(/if an account/i);
+    expect(useAuthStore.getState().error).toBeNull();
+  });
+
+  it('sets the summa_reset_pending sessionStorage flag', async () => {
+    mockResetPasswordForEmail.mockResolvedValue({ data: {}, error: null } as never);
+    await useAuthStore.getState().requestPasswordReset('user@example.com');
+    expect(sessionStorage.getItem('summa_reset_pending')).toBe('1');
+  });
+});
+
+describe('useAuthStore.updatePassword', () => {
+  it('calls updateUser with the new password', async () => {
+    mockUpdateUser.mockResolvedValue({ data: {}, error: null } as never);
+    useAuthStore.setState({ recoveryMode: true });
+    await useAuthStore.getState().updatePassword('NewPass1!');
+    expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'NewPass1!' });
+  });
+
+  it('clears recoveryMode on success', async () => {
+    mockUpdateUser.mockResolvedValue({ data: {}, error: null } as never);
+    useAuthStore.setState({ recoveryMode: true });
+    await useAuthStore.getState().updatePassword('NewPass1!');
+    expect(useAuthStore.getState().recoveryMode).toBe(false);
+  });
+
+  it('surfaces error and keeps recoveryMode on failure', async () => {
+    mockUpdateUser.mockResolvedValue({ data: {}, error: { message: 'Password too weak' } } as never);
+    useAuthStore.setState({ recoveryMode: true });
+    await useAuthStore.getState().updatePassword('weak');
+    expect(useAuthStore.getState().error).toMatch(/password too weak/i);
+    expect(useAuthStore.getState().recoveryMode).toBe(true);
   });
 });
