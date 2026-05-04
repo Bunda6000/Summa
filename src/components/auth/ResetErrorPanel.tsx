@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function ResetErrorPanel({ error, onDismiss }: Props) {
-  const { requestPasswordReset, clearResetError, loading, info: authInfo, error: authError } = useAuthStore();
+  const { requestPasswordReset, clearResetError, loading, info: authInfo } = useAuthStore();
   const [email, setEmail] = useState('');
 
   const handleResend = async (e: React.FormEvent) => {
@@ -44,7 +44,6 @@ export default function ResetErrorPanel({ error, onDismiss }: Props) {
       </div>
 
       {authInfo && <p role="status" className={styles.infoMsg}>{authInfo}</p>}
-      {authError && <p role="alert" className={styles.serverError}>{authError}</p>}
 
       <button type="submit" disabled={loading || !email} className={styles.btnPrimary}>
         {loading ? 'Sending…' : 'Send new reset link'}
