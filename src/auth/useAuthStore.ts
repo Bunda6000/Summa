@@ -75,7 +75,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
     // is applied after module load (module-level check runs with empty location).
     const params = new URLSearchParams(window.location.search);
     const errorCode = params.get('error_code');
-    const error = params.get('error');
+    const urlError = params.get('error');
 
     if (errorCode === 'otp_expired' && sessionStorage.getItem('summa_reset_pending') === '1') {
       sessionStorage.removeItem('summa_reset_pending');
@@ -84,7 +84,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
     } else if (errorCode === 'otp_expired' || errorCode === 'otp_disabled') {
       set({ verificationError: 'The verification link has expired. Please request a new one.' });
       window.history.replaceState({}, '', window.location.pathname);
-    } else if (error === 'access_denied') {
+    } else if (urlError === 'access_denied') {
       const desc = params.get('error_description') ?? 'Verification failed.';
       set({ verificationError: desc.replace(/\+/g, ' ') });
       window.history.replaceState({}, '', window.location.pathname);
@@ -95,7 +95,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === 'PASSWORD_RECOVERY') {
-        set({ recoveryMode: true });
+        set({ recoveryMode: true, resetError: null });
       }
       set({ session });
     });
