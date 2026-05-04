@@ -5,9 +5,10 @@ import styles from './AuthForms.module.css';
 
 interface Props {
   onSwitchToSignUp: () => void;
+  onForgotPassword: () => void;
 }
 
-export default function SignInForm({ onSwitchToSignUp }: Props) {
+export default function SignInForm({ onSwitchToSignUp, onForgotPassword }: Props) {
   const { signIn, loading, error, lockedUntil } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,6 +55,9 @@ export default function SignInForm({ onSwitchToSignUp }: Props) {
           className={styles.input}
           disabled={isLocked}
         />
+        <button type="button" onClick={onForgotPassword} className={styles.switchLink}>
+          Forgot password?
+        </button>
       </div>
 
       {isLocked && (

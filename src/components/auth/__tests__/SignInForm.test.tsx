@@ -12,6 +12,8 @@ vi.mock('../../../lib/supabase', () => ({
       onAuthStateChange: vi.fn(() => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
+      resetPasswordForEmail: vi.fn(),
+      updateUser: vi.fn(),
     },
   },
 }));
@@ -30,19 +32,22 @@ const fakeSession = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuthStore.setState({ session: null, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null });
+  useAuthStore.setState({
+    session: null, loading: false, error: null, info: null,
+    failedAttempts: 0, lockedUntil: null, recoveryMode: false, resetError: null,
+  });
 });
 
 describe('SignInForm', () => {
   it('renders email, password fields and a Sign in button', () => {
-    render(<SignInForm onSwitchToSignUp={vi.fn()} />);
+    render(<SignInForm onSwitchToSignUp={vi.fn()} onForgotPassword={vi.fn()} />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
   it('shows email validation error on submit with blank email', async () => {
-    render(<SignInForm onSwitchToSignUp={vi.fn()} />);
+    render(<SignInForm onSwitchToSignUp={vi.fn()} onForgotPassword={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByText(/email is required/i)).toBeInTheDocument();
     expect(mockSignIn).not.toHaveBeenCalled();
@@ -50,7 +55,7 @@ describe('SignInForm', () => {
 
   it('calls signIn with correct credentials on valid submit', async () => {
     mockSignIn.mockResolvedValue({ data: { session: fakeSession, user: fakeSession.user }, error: null } as never);
-    render(<SignInForm onSwitchToSignUp={vi.fn()} />);
+    render(<SignInForm onSwitchToSignUp={vi.fn()} onForgotPassword={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'user@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'Str0ng!pass');
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
@@ -59,7 +64,7 @@ describe('SignInForm', () => {
 
   it('shows error message on invalid credentials', async () => {
     mockSignIn.mockResolvedValue({ data: { session: null, user: null }, error: { message: 'Invalid login credentials' } } as never);
-    render(<SignInForm onSwitchToSignUp={vi.fn()} />);
+    render(<SignInForm onSwitchToSignUp={vi.fn()} onForgotPassword={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'user@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'wrongpassword');
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
@@ -69,7 +74,7 @@ describe('SignInForm', () => {
   it('shows lockout message after 5 failed attempts', async () => {
     mockSignIn.mockResolvedValue({ data: { session: null, user: null }, error: { message: 'Invalid login credentials' } } as never);
     useAuthStore.setState({ failedAttempts: 4 });
-    render(<SignInForm onSwitchToSignUp={vi.fn()} />);
+    render(<SignInForm onSwitchToSignUp={vi.fn()} onForgotPassword={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'user@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'wrong');
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
@@ -79,10 +84,17 @@ describe('SignInForm', () => {
   it('disables the submit button while loading', async () => {
     mockSignIn.mockImplementation(() => new Promise(() => {})); // never resolves
 
-    render(<SignInForm onSwitchToSignUp={vi.fn()} />);
+    render(<SignInForm onSwitchToSignUp={vi.fn()} onForgotPassword={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'user@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'Str0ng!pass');
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
     expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
+  });
+
+  it('calls onForgotPassword when "Forgot password?" is clicked', async () => {
+    const onForgot = vi.fn();
+    render(<SignInForm onSwitchToSignUp={vi.fn()} onForgotPassword={onForgot} />);
+    await userEvent.click(screen.getByRole('button', { name: /forgot password/i }));
+    expect(onForgot).toHaveBeenCalled();
   });
 });
