@@ -221,6 +221,7 @@ describe('useAuthStore.requestPasswordReset', () => {
     await useAuthStore.getState().requestPasswordReset('nobody@example.com');
     expect(useAuthStore.getState().info).toMatch(/if an account/i);
     expect(useAuthStore.getState().error).toBeNull();
+    expect(sessionStorage.getItem('summa_reset_pending')).toBeNull();
   });
 
   it('sets the summa_reset_pending sessionStorage flag', async () => {

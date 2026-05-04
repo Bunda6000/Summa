@@ -190,10 +190,12 @@ const useAuthStore = create<AuthState>((set, get) => ({
 
   requestPasswordReset: async (email) => {
     set({ loading: true, error: null, info: null });
-    await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
     });
-    sessionStorage.setItem('summa_reset_pending', '1');
+    if (!error) {
+      sessionStorage.setItem('summa_reset_pending', '1');
+    }
     set({ loading: false, info: 'If an account with that email exists, a reset link has been sent.' });
   },
 
