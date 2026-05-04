@@ -8,6 +8,7 @@ vi.mock('../../lib/supabase', () => ({
       signInWithPassword: vi.fn(),
       signOut: vi.fn(),
       getSession: vi.fn(),
+      resend: vi.fn(),
       onAuthStateChange: vi.fn(() => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
@@ -21,6 +22,7 @@ import useAuthStore from '../useAuthStore';
 const mockSignUp = vi.mocked(supabase.auth.signUp);
 const mockSignIn = vi.mocked(supabase.auth.signInWithPassword);
 const mockSignOut = vi.mocked(supabase.auth.signOut);
+const mockResend = vi.mocked(supabase.auth.resend);
 
 const fakeSession = {
   user: { id: 'user-123', email: 'user@example.com' },
@@ -30,7 +32,17 @@ const fakeSession = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuthStore.setState({ session: null, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null });
+  useAuthStore.setState({
+    session: null,
+    loading: false,
+    error: null,
+    info: null,
+    failedAttempts: 0,
+    lockedUntil: null,
+    resendCount: 0,
+    resendCooldownUntil: null,
+    verificationError: null,
+  });
 });
 
 describe('useAuthStore.signUp', () => {
@@ -102,5 +114,88 @@ describe('useAuthStore.signOut', () => {
     await useAuthStore.getState().signOut();
     expect(useAuthStore.getState().session).toBeNull();
     expect(mockSignOut).toHaveBeenCalled();
+  });
+});
+
+describe('useAuthStore.resendVerification', () => {
+  it('sends verification email and sets info message', async () => {
+    mockResend.mockResolvedValue({ data: {}, error: null } as never);
+    await useAuthStore.getState().resendVerification('user@example.com');
+    expect(useAuthStore.getState().info).toMatch(/check your inbox/i);
+    expect(useAuthStore.getState().error).toBeNull();
+    expect(mockResend).toHaveBeenCalledWith({ type: 'signup', email: 'user@example.com' });
+  });
+
+  it('increments resendCount on success', async () => {
+    mockResend.mockResolvedValue({ data: {}, error: null } as never);
+    await useAuthStore.getState().resendVerification('user@example.com');
+    expect(useAuthStore.getState().resendCount).toBe(1);
+  });
+
+  it('blocks resend when count reaches threshold and sets cooldown', async () => {
+    useAuthStore.setState({ resendCount: 3 });
+    await useAuthStore.getState().resendVerification('user@example.com');
+    expect(useAuthStore.getState().error).toMatch(/too many resend/i);
+    expect(useAuthStore.getState().resendCooldownUntil).not.toBeNull();
+    expect(mockResend).not.toHaveBeenCalled();
+  });
+
+  it('blocks resend when cooldown is active', async () => {
+    useAuthStore.setState({ resendCooldownUntil: Date.now() + 60_000 });
+    await useAuthStore.getState().resendVerification('user@example.com');
+    expect(useAuthStore.getState().error).toMatch(/too many resend/i);
+    expect(mockResend).not.toHaveBeenCalled();
+  });
+
+  it('passes Supabase rate-limit error through as friendly message', async () => {
+    mockResend.mockResolvedValue({ data: null, error: { message: 'Email rate limit exceeded' } } as never);
+    await useAuthStore.getState().resendVerification('user@example.com');
+    expect(useAuthStore.getState().error).toMatch(/too many resend/i);
+  });
+
+  it('surfaces non-rate-limit Supabase errors', async () => {
+    mockResend.mockResolvedValue({ data: null, error: { message: 'Something went wrong' } } as never);
+    await useAuthStore.getState().resendVerification('user@example.com');
+    expect(useAuthStore.getState().error).toBe('Something went wrong');
+  });
+});
+
+describe('useAuthStore.initAuth — URL error detection', () => {
+  it('sets verificationError when URL has otp_expired error code', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as never);
+    vi.stubGlobal('location', {
+      search: '?error_code=otp_expired&error=access_denied&error_description=Email+link+is+invalid+or+has+expired',
+      pathname: '/',
+      href: 'http://localhost/',
+    });
+
+    await useAuthStore.getState().initAuth();
+
+    expect(useAuthStore.getState().verificationError).toMatch(/expired/i);
+    vi.unstubAllGlobals();
+  });
+
+  it('sets verificationError for any access_denied error', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as never);
+    vi.stubGlobal('location', {
+      search: '?error=access_denied&error_description=Verification+failed',
+      pathname: '/',
+      href: 'http://localhost/',
+    });
+
+    await useAuthStore.getState().initAuth();
+
+    expect(useAuthStore.getState().verificationError).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it('does not set verificationError when URL has no error params', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null } as never);
+    vi.stubGlobal('location', { search: '', pathname: '/', href: 'http://localhost/' });
+
+    await useAuthStore.getState().initAuth();
+
+    expect(useAuthStore.getState().verificationError).toBeNull();
+    vi.unstubAllGlobals();
   });
 });

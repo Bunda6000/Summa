@@ -22,7 +22,13 @@ import useAuthStore from '../../../auth/useAuthStore';
 import AccountModal from '../AccountModal';
 
 const fakeSession = {
-  user: { id: 'user-123', email: 'alice@example.com' },
+  user: { id: 'user-123', email: 'alice@example.com', email_confirmed_at: '2024-01-01T00:00:00Z' },
+  access_token: 'tok',
+  refresh_token: 'ref',
+} as never;
+
+const fakeSessionUnverified = {
+  user: { id: 'user-123', email: 'alice@example.com', email_confirmed_at: null },
   access_token: 'tok',
   refresh_token: 'ref',
 } as never;
@@ -109,5 +115,59 @@ describe('AccountModal', () => {
     render(<AccountModal onClose={onClose} />);
     await userEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('AccountModal — email verification banner', () => {
+  beforeEach(() => {
+    vi.spyOn(useProfileStore.getState(), 'loadProfile').mockResolvedValue(undefined);
+  });
+
+  it('shows verification banner when email is not confirmed', () => {
+    useAuthStore.setState({ session: fakeSessionUnverified, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null, resendCount: 0, resendCooldownUntil: null, verificationError: null });
+    useProfileStore.setState({ profile: fakeProfile, loading: false, saving: false, error: null });
+    render(<AccountModal onClose={vi.fn()} />);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/verify your email/i)).toBeInTheDocument();
+  });
+
+  it('does not show verification banner when email is confirmed', () => {
+    useAuthStore.setState({ session: fakeSession, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null, resendCount: 0, resendCooldownUntil: null, verificationError: null });
+    useProfileStore.setState({ profile: fakeProfile, loading: false, saving: false, error: null });
+    render(<AccountModal onClose={vi.fn()} />);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows resend button in the banner for unverified users', () => {
+    useAuthStore.setState({ session: fakeSessionUnverified, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null, resendCount: 0, resendCooldownUntil: null, verificationError: null });
+    useProfileStore.setState({ profile: fakeProfile, loading: false, saving: false, error: null });
+    render(<AccountModal onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /resend/i })).toBeInTheDocument();
+  });
+
+  it('calls resendVerification with the user email when resend is clicked', async () => {
+    const mockResendFn = vi.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({ session: fakeSessionUnverified, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null, resendCount: 0, resendCooldownUntil: null, verificationError: null });
+    useProfileStore.setState({ profile: fakeProfile, loading: false, saving: false, error: null });
+    vi.spyOn(useAuthStore.getState(), 'resendVerification').mockImplementation(mockResendFn);
+
+    render(<AccountModal onClose={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /resend/i }));
+
+    await waitFor(() => expect(mockResendFn).toHaveBeenCalledWith('alice@example.com'));
+  });
+
+  it('disables upgrade button when email is not confirmed', () => {
+    useAuthStore.setState({ session: fakeSessionUnverified, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null, resendCount: 0, resendCooldownUntil: null, verificationError: null });
+    useProfileStore.setState({ profile: { ...fakeProfile, plan: 'free' }, loading: false, saving: false, error: null });
+    render(<AccountModal onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /upgrade/i })).toBeDisabled();
+  });
+
+  it('enables upgrade button when email is confirmed', () => {
+    useAuthStore.setState({ session: fakeSession, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null, resendCount: 0, resendCooldownUntil: null, verificationError: null });
+    useProfileStore.setState({ profile: { ...fakeProfile, plan: 'free' }, loading: false, saving: false, error: null });
+    render(<AccountModal onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /upgrade/i })).not.toBeDisabled();
   });
 });

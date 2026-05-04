@@ -8,13 +8,14 @@ interface Props {
 }
 
 export default function AccountModal({ onClose }: Props) {
-  const { session } = useAuthStore();
+  const { session, resendVerification, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
 
   const [displayName, setDisplayName] = useState('');
 
   const userId = session?.user.id ?? '';
   const email = session?.user.email ?? '';
+  const isEmailVerified = !!session?.user.email_confirmed_at;
 
   useEffect(() => {
     if (userId) loadProfile(userId);
@@ -27,6 +28,10 @@ export default function AccountModal({ onClose }: Props) {
   const handleSave = async () => {
     if (!userId) return;
     await updateDisplayName(userId, displayName);
+  };
+
+  const handleResend = async () => {
+    if (email) await resendVerification(email);
   };
 
   const planLabel = profile?.plan === 'paid' ? 'Paid' : 'Free';
@@ -55,6 +60,24 @@ export default function AccountModal({ onClose }: Props) {
           <p className={styles.loading}>Loading…</p>
         ) : (
           <>
+            {/* Email verification banner */}
+            {!isEmailVerified && (
+              <div role="alert" className={styles.verifyBanner}>
+                <p className={styles.verifyBannerText}>
+                  Verify your email address to unlock all features.
+                </p>
+                {authInfo && <p className={styles.verifySuccess}>{authInfo}</p>}
+                {authError && <p className={styles.verifyError}>{authError}</p>}
+                <button
+                  className={styles.resendBtn}
+                  onClick={handleResend}
+                  disabled={authLoading}
+                >
+                  {authLoading ? 'Sending…' : 'Resend verification email'}
+                </button>
+              </div>
+            )}
+
             {/* Email — read only */}
             <div className={styles.field}>
               <span className={styles.label}>Email</span>
@@ -93,6 +116,22 @@ export default function AccountModal({ onClose }: Props) {
               <span className={styles.label}>Subscription status</span>
               <span className={styles.value}>{statusLabel}</span>
             </div>
+
+            {/* Upgrade — guarded by email verification */}
+            {profile?.plan === 'free' && (
+              <div className={styles.field}>
+                <button
+                  className={styles.upgradeBtn}
+                  disabled={!isEmailVerified}
+                  title={!isEmailVerified ? 'Verify your email to upgrade' : undefined}
+                >
+                  Upgrade to Paid
+                </button>
+                {!isEmailVerified && (
+                  <span className={styles.hint}>Email verification required to purchase a subscription.</span>
+                )}
+              </div>
+            )}
 
             {error && <p className={styles.errorMsg}>{error}</p>}
 

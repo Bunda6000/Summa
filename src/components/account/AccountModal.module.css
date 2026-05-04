@@ -162,3 +162,77 @@
   text-align: center;
   padding: 16px 0;
 }
+
+.verifyBanner {
+  background: color-mix(in srgb, var(--amber, #F59E0B) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber, #F59E0B) 30%, transparent);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.verifyBannerText {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--amber, #F59E0B);
+  font-weight: 500;
+  margin: 0;
+}
+
+.verifySuccess {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--accent);
+  margin: 0;
+}
+
+.verifyError {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--red);
+  margin: 0;
+}
+
+.resendBtn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--amber, #F59E0B) 50%, transparent);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber, #F59E0B);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.resendBtn:hover {
+  background: color-mix(in srgb, var(--amber, #F59E0B) 10%, transparent);
+}
+
+.resendBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upgradeBtn {
+  padding: 10px 0;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: 100%;
+}
+
+.upgradeBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
