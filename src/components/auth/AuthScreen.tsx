@@ -32,6 +32,7 @@ export default function AuthScreen() {
 
   const handleDismissResetError = () => {
     clearError();
+    clearResetError();
     setView('signin');
   };
 

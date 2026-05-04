@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useAuthStore from '../../auth/useAuthStore';
+import { validateEmail } from '../../auth/validation';
 import styles from './AuthForms.module.css';
 
 interface Props {
@@ -10,10 +11,14 @@ interface Props {
 export default function ResetErrorPanel({ error, onDismiss }: Props) {
   const { requestPasswordReset, clearResetError, loading, info: authInfo } = useAuthStore();
   const [email, setEmail] = useState('');
+  const [emailErr, setEmailErr] = useState<string | null>(null);
 
   const handleResend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) await requestPasswordReset(email);
+    const err = validateEmail(email);
+    setEmailErr(err);
+    if (err) return;
+    await requestPasswordReset(email);
   };
 
   const handleDismiss = () => {
@@ -37,15 +42,16 @@ export default function ResetErrorPanel({ error, onDismiss }: Props) {
           type="email"
           autoComplete="email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
-          className={styles.input}
+          onChange={e => { setEmail(e.target.value); setEmailErr(null); }}
+          className={`${styles.input} ${emailErr ? styles.inputError : ''}`}
           placeholder="your@email.com"
         />
+        {emailErr && <span role="alert" className={styles.errorMsg}>{emailErr}</span>}
       </div>
 
       {authInfo && <p role="status" className={styles.infoMsg}>{authInfo}</p>}
 
-      <button type="submit" disabled={loading || !email} className={styles.btnPrimary}>
+      <button type="submit" disabled={loading} className={styles.btnPrimary}>
         {loading ? 'Sending…' : 'Send new reset link'}
       </button>
 

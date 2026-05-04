@@ -33,6 +33,14 @@ describe('ResetErrorPanel', () => {
     expect(screen.getByText(EXPIRED_MSG)).toBeInTheDocument();
   });
 
+  it('shows inline error for invalid email format without calling requestPasswordReset', async () => {
+    render(<ResetErrorPanel error={EXPIRED_MSG} onDismiss={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText(/email/i), 'notanemail');
+    await userEvent.click(screen.getByRole('button', { name: /send new reset link/i }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
+  });
+
   it('calls requestPasswordReset when resend form submitted with email', async () => {
     mockResetPasswordForEmail.mockResolvedValue({ data: {}, error: null } as never);
     render(<ResetErrorPanel error={EXPIRED_MSG} onDismiss={vi.fn()} />);

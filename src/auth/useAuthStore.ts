@@ -82,7 +82,9 @@ const useAuthStore = create<AuthState>((set, get) => ({
       set({ resetError: 'The password reset link has expired. Please request a new one.' });
       window.history.replaceState({}, '', window.location.pathname);
     } else if (errorCode === 'otp_expired' || errorCode === 'otp_disabled') {
-      set({ verificationError: 'The verification link has expired. Please request a new one.' });
+      if (!_initialResetError) {
+        set({ verificationError: 'The verification link has expired. Please request a new one.' });
+      }
       window.history.replaceState({}, '', window.location.pathname);
     } else if (urlError === 'access_denied') {
       const desc = params.get('error_description') ?? 'Verification failed.';
@@ -95,9 +97,10 @@ const useAuthStore = create<AuthState>((set, get) => ({
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === 'PASSWORD_RECOVERY') {
-        set({ recoveryMode: true, resetError: null });
+        set({ recoveryMode: true, resetError: null, session });
+      } else {
+        set({ session });
       }
-      set({ session });
     });
 
     return () => subscription.unsubscribe();
