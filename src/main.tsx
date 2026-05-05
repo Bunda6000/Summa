@@ -4,6 +4,7 @@ import './index.css';
 import BudgetApp from './App';
 import useBudgetStore from './store/useBudgetStore';
 import useAuthStore from './auth/useAuthStore';
+import useSubscriptionStore from './subscription/useSubscriptionStore';
 import AuthScreen from './components/auth/AuthScreen';
 
 useBudgetStore.subscribe(
@@ -16,6 +17,7 @@ useBudgetStore.subscribe(
 function Root() {
   const { session, initAuth } = useAuthStore();
   const { initStore, resetStore, initialized } = useBudgetStore();
+  const { initSubscription, resetSubscription } = useSubscriptionStore();
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
@@ -30,10 +32,12 @@ function Root() {
   useEffect(() => {
     if (!session) {
       resetStore();
+      resetSubscription();
       return;
     }
     initStore(session.user.id);
-  }, [session, initStore, resetStore]);
+    initSubscription(session.user.id);
+  }, [session, initStore, resetStore, initSubscription, resetSubscription]);
 
   if (!authReady) return null;
   if (!session) return <AuthScreen />;
