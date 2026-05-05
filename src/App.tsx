@@ -6,6 +6,7 @@ import { CHART_COLORS } from './constants';
 import useBudgetStore from './store/useBudgetStore';
 import useUIStore from './store/useUIStore';
 import useAuthStore from './auth/useAuthStore';
+import AccountModal from './components/account/AccountModal';
 import styles from './App.module.css';
 import type { Category, ExpenseEntry } from './types';
 
@@ -19,6 +20,7 @@ import ExpenseModal from './components/modals/ExpenseModal';
 import CategoryFormModal from './components/modals/CategoryFormModal';
 import FixedIncomeModal from './components/modals/FixedIncomeModal';
 import VarIncomeModal from './components/modals/VarIncomeModal';
+import LockedFeature from './components/subscription/LockedFeature';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -54,6 +56,7 @@ interface ColDef {
 export default function BudgetApp() {
   // Auth
   const signOut = useAuthStore(state => state.signOut);
+  const [showAccount, setShowAccount] = useState(false);
 
   // Budget data from store
   const appData = useBudgetStore(state => state.appData);
@@ -135,6 +138,8 @@ export default function BudgetApp() {
 
       {toast && <div className={styles.toast}>{toast}</div>}
 
+      {showAccount && <AccountModal onClose={() => setShowAccount(false)} />}
+
       {/* HEADER */}
       <header className={styles.header} style={{boxShadow:"var(--header-shadow)"}}>
         <div className={`header-inner ${styles.headerInner}`}>
@@ -153,6 +158,10 @@ export default function BudgetApp() {
             <button onClick={toggleDark} title={dark?"Light mode":"Dark mode"}
               style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 12px",cursor:"pointer",fontSize:18,lineHeight:1,transition:"all .35s cubic-bezier(.22,1,.36,1)",minWidth:42,minHeight:42,display:"flex",alignItems:"center",justifyContent:"center",transform:dark?"rotate(180deg)":"rotate(0deg)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
               {dark ? "☀" : "☾"}
+            </button>
+            <button onClick={() => setShowAccount(true)} title="Account"
+              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+              Account
             </button>
             <button onClick={signOut} title="Logout"
               style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
@@ -367,14 +376,16 @@ export default function BudgetApp() {
             {/* Right content */}
             <div style={{flex:1,minWidth:0}}>
               {cat && cat.id === "loans" ? (
-                <LoansView
-                  loanTypes={loanTypes}
-                  getLoanAmountForMonth={getLoanAmountForMonth}
-                  expYear={expYear} setExpYear={setExpYear}
-                  onAdd={addLoanType} onUpdate={updateLoanType} onDelete={deleteLoanType}
-                  loanPaid={loanPaid} toggleLoanPaid={toggleLoanPaid} setLoanPaidDate={setLoanPaidDate} toggleAllLoansPaid={toggleAllLoansPaid}
-                  paidPicker={paidPicker} setPaidPicker={setPaidPicker}
-                />
+                <LockedFeature featureKey="loans_view">
+                  <LoansView
+                    loanTypes={loanTypes}
+                    getLoanAmountForMonth={getLoanAmountForMonth}
+                    expYear={expYear} setExpYear={setExpYear}
+                    onAdd={addLoanType} onUpdate={updateLoanType} onDelete={deleteLoanType}
+                    loanPaid={loanPaid} toggleLoanPaid={toggleLoanPaid} setLoanPaidDate={setLoanPaidDate} toggleAllLoansPaid={toggleAllLoansPaid}
+                    paidPicker={paidPicker} setPaidPicker={setPaidPicker}
+                  />
+                </LockedFeature>
               ) : cat ? (
                 <>
                   <div className={styles.yearNav}>
@@ -706,11 +717,13 @@ export default function BudgetApp() {
 
         {/* ═══ BUDGET TAB ═══ */}
         {tab === "budget" && (
-          <BudgetView year={budgetYear} setYear={setBudgetYear} categories={categories} expenses={expenses}
-            getFixedIncomeForMonth={getFixedIncomeForMonth} getVarIncomeForMonth={getVarIncomeForMonth}
-            getTotalExpensesForMonth={getTotalExpensesForMonth} getPaidExpForMonth={getPaidExpForMonth}
-            getAnticipatedExpForMonth={getAnticipatedExpForMonth} getCatPaidForMonth={getCatPaidForMonth}
-            getExp={getExp} dark={dark} />
+          <LockedFeature featureKey="budget_view">
+            <BudgetView year={budgetYear} setYear={setBudgetYear} categories={categories} expenses={expenses}
+              getFixedIncomeForMonth={getFixedIncomeForMonth} getVarIncomeForMonth={getVarIncomeForMonth}
+              getTotalExpensesForMonth={getTotalExpensesForMonth} getPaidExpForMonth={getPaidExpForMonth}
+              getAnticipatedExpForMonth={getAnticipatedExpForMonth} getCatPaidForMonth={getCatPaidForMonth}
+              getExp={getExp} dark={dark} />
+          </LockedFeature>
         )}
       </main>
 
