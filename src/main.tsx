@@ -4,6 +4,7 @@ import './index.css';
 import BudgetApp from './App';
 import useBudgetStore from './store/useBudgetStore';
 import useAuthStore from './auth/useAuthStore';
+import useBillingStore from './store/useBillingStore';
 import AuthScreen from './components/auth/AuthScreen';
 
 useBudgetStore.subscribe(
@@ -33,6 +34,8 @@ function Root() {
       return;
     }
     initStore(session.user.id);
+    // Silently restore an existing Play subscription on sign-in / reinstall.
+    useBillingStore.getState().restorePurchases(session.user.id);
   }, [session, initStore, resetStore]);
 
   if (!authReady) return null;
