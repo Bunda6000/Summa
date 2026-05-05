@@ -20,6 +20,7 @@ import ExpenseModal from './components/modals/ExpenseModal';
 import CategoryFormModal from './components/modals/CategoryFormModal';
 import FixedIncomeModal from './components/modals/FixedIncomeModal';
 import VarIncomeModal from './components/modals/VarIncomeModal';
+import LockedFeature from './components/subscription/LockedFeature';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -375,14 +376,16 @@ export default function BudgetApp() {
             {/* Right content */}
             <div style={{flex:1,minWidth:0}}>
               {cat && cat.id === "loans" ? (
-                <LoansView
-                  loanTypes={loanTypes}
-                  getLoanAmountForMonth={getLoanAmountForMonth}
-                  expYear={expYear} setExpYear={setExpYear}
-                  onAdd={addLoanType} onUpdate={updateLoanType} onDelete={deleteLoanType}
-                  loanPaid={loanPaid} toggleLoanPaid={toggleLoanPaid} setLoanPaidDate={setLoanPaidDate} toggleAllLoansPaid={toggleAllLoansPaid}
-                  paidPicker={paidPicker} setPaidPicker={setPaidPicker}
-                />
+                <LockedFeature featureKey="loans_view">
+                  <LoansView
+                    loanTypes={loanTypes}
+                    getLoanAmountForMonth={getLoanAmountForMonth}
+                    expYear={expYear} setExpYear={setExpYear}
+                    onAdd={addLoanType} onUpdate={updateLoanType} onDelete={deleteLoanType}
+                    loanPaid={loanPaid} toggleLoanPaid={toggleLoanPaid} setLoanPaidDate={setLoanPaidDate} toggleAllLoansPaid={toggleAllLoansPaid}
+                    paidPicker={paidPicker} setPaidPicker={setPaidPicker}
+                  />
+                </LockedFeature>
               ) : cat ? (
                 <>
                   <div className={styles.yearNav}>
@@ -714,11 +717,13 @@ export default function BudgetApp() {
 
         {/* ═══ BUDGET TAB ═══ */}
         {tab === "budget" && (
-          <BudgetView year={budgetYear} setYear={setBudgetYear} categories={categories} expenses={expenses}
-            getFixedIncomeForMonth={getFixedIncomeForMonth} getVarIncomeForMonth={getVarIncomeForMonth}
-            getTotalExpensesForMonth={getTotalExpensesForMonth} getPaidExpForMonth={getPaidExpForMonth}
-            getAnticipatedExpForMonth={getAnticipatedExpForMonth} getCatPaidForMonth={getCatPaidForMonth}
-            getExp={getExp} dark={dark} />
+          <LockedFeature featureKey="budget_view">
+            <BudgetView year={budgetYear} setYear={setBudgetYear} categories={categories} expenses={expenses}
+              getFixedIncomeForMonth={getFixedIncomeForMonth} getVarIncomeForMonth={getVarIncomeForMonth}
+              getTotalExpensesForMonth={getTotalExpensesForMonth} getPaidExpForMonth={getPaidExpForMonth}
+              getAnticipatedExpForMonth={getAnticipatedExpForMonth} getCatPaidForMonth={getCatPaidForMonth}
+              getExp={getExp} dark={dark} />
+          </LockedFeature>
         )}
       </main>
 

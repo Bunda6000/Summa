@@ -1,0 +1,69 @@
+.container {
+  position: relative;
+  min-height: 240px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--modal-bg, rgba(10, 10, 16, 0.88));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.lockIcon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text, #e8e8ef);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--muted, #8a8a96);
+  margin: 0;
+  max-width: 280px;
+}
+
+.ctaButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  background: var(--accent, #1a9e76);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.ctaButton:hover {
+  opacity: 0.88;
+}
+
+.blurred {
+  filter: blur(4px);
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
