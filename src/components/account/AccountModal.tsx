@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
+import useBillingStore from '../../store/useBillingStore';
 import styles from './AccountModal.module.css';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 export default function AccountModal({ onClose }: Props) {
   const { session, resendVerification, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
+  const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
 
   const [displayName, setDisplayName] = useState('');
 
@@ -32,6 +34,16 @@ export default function AccountModal({ onClose }: Props) {
 
   const handleResend = async () => {
     if (email) await resendVerification(email);
+  };
+
+  const handleUpgrade = async () => {
+    if (!userId) return;
+    clearError();
+    await purchase(userId);
+  };
+
+  const handleManageSubscription = async () => {
+    await openManageSubscription();
   };
 
   const planLabel = profile?.plan === 'paid' ? 'Paid' : 'Free';
@@ -117,20 +129,38 @@ export default function AccountModal({ onClose }: Props) {
               <span className={styles.value}>{statusLabel}</span>
             </div>
 
-            {/* Upgrade — guarded by email verification */}
+            {/* Upgrade — guarded by email verification and billing state */}
             {profile?.plan === 'free' && (
               <div className={styles.field}>
                 <button
                   className={styles.upgradeBtn}
-                  disabled={!isEmailVerified}
+                  onClick={handleUpgrade}
+                  disabled={!isEmailVerified || billingStatus === 'purchasing'}
                   title={!isEmailVerified ? 'Verify your email to upgrade' : undefined}
                 >
-                  Upgrade to Paid
+                  {billingStatus === 'purchasing' ? 'Processing…' : 'Upgrade to Paid'}
                 </button>
                 {!isEmailVerified && (
                   <span className={styles.hint}>Email verification required to purchase a subscription.</span>
                 )}
               </div>
+            )}
+
+            {/* Manage Subscription — only shown for paid users */}
+            {profile?.plan === 'paid' && (
+              <div className={styles.field}>
+                <button
+                  className={styles.manageSubBtn}
+                  onClick={handleManageSubscription}
+                >
+                  Manage Subscription
+                </button>
+              </div>
+            )}
+
+            {/* Billing error / cancellation message */}
+            {billingError && (
+              <p className={styles.errorMsg}>{billingError}</p>
             )}
 
             {error && <p className={styles.errorMsg}>{error}</p>}
