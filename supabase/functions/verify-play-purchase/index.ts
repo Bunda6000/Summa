@@ -200,17 +200,18 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Upsert subscription record — token is unique per purchase
+    // Upsert subscription record — one row per user, updated on each renewal.
+    // Conflicts on user_id (the PK); purchase_token is updated in-place.
     const { error: subError } = await adminClient.from('subscriptions').upsert(
       {
         user_id: userId,
         purchase_token: token,
         product_id: productId,
         order_id: typeof orderId === 'string' ? orderId : null,
-        subscription_status: 'active',
-        renewal_date: renewalDate?.toISOString() ?? null,
+        status: 'active',
+        current_period_end: renewalDate?.toISOString() ?? null,
       },
-      { onConflict: 'purchase_token' },
+      { onConflict: 'user_id' },
     );
 
     if (subError) {
@@ -225,7 +226,6 @@ Deno.serve(async (req: Request) => {
       .update({
         plan: 'paid',
         subscription_status: 'active',
-        renewal_date: renewalDate?.toISOString() ?? null,
       })
       .eq('user_id', userId);
 

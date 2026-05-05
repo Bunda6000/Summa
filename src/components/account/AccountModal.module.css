@@ -254,3 +254,59 @@
 .manageSubBtn:hover {
   background: var(--accent-bg);
 }
+
+.cancelSubBtn {
+  padding: 10px 0;
+  background: transparent;
+  color: var(--red, #EF4444);
+  border: 1.5px solid color-mix(in srgb, var(--red, #EF4444) 50%, transparent);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  width: 100%;
+}
+
+.cancelSubBtn:hover {
+  background: color-mix(in srgb, var(--red, #EF4444) 8%, transparent);
+}
+
+.downgradeNote {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.downgradeBtn {
+  align-self: flex-start;
+  padding: 6px 14px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.downgradeBtn:hover {
+  background: var(--chip);
+}
+
+.cancelNotice {
+  background: color-mix(in srgb, var(--red, #EF4444) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red, #EF4444) 20%, transparent);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--red, #EF4444);
+  margin: 0;
+}
