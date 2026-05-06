@@ -7,6 +7,7 @@ import useBudgetStore from './store/useBudgetStore';
 import useUIStore from './store/useUIStore';
 import useAuthStore from './auth/useAuthStore';
 import AccountModal from './components/account/AccountModal';
+import BillingModal from './components/billing/BillingModal';
 import styles from './App.module.css';
 import type { Category, ExpenseEntry } from './types';
 
@@ -57,6 +58,7 @@ export default function BudgetApp() {
   // Auth
   const signOut = useAuthStore(state => state.signOut);
   const [showAccount, setShowAccount] = useState(false);
+  const [showBilling, setShowBilling] = useState(false);
 
   // Budget data from store
   const appData = useBudgetStore(state => state.appData);
@@ -138,7 +140,13 @@ export default function BudgetApp() {
 
       {toast && <div className={styles.toast}>{toast}</div>}
 
-      {showAccount && <AccountModal onClose={() => setShowAccount(false)} />}
+      {showAccount && (
+        <AccountModal
+          onClose={() => setShowAccount(false)}
+          onOpenBilling={() => { setShowAccount(false); setShowBilling(true); }}
+        />
+      )}
+      {showBilling && <BillingModal onClose={() => setShowBilling(false)} />}
 
       {/* HEADER */}
       <header className={styles.header} style={{boxShadow:"var(--header-shadow)"}}>

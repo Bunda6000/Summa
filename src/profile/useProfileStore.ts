@@ -1,11 +1,12 @@
-import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { create } from "zustand";
+import { supabase } from "../lib/supabase";
 
 export interface Profile {
   user_id: string;
   display_name: string | null;
-  plan: 'free' | 'paid';
-  subscription_status: 'active' | 'cancelled' | 'past_due';
+  plan: "free" | "paid";
+  subscription_status: "active" | "cancelled" | "past_due";
+  renewal_date: string | null;
 }
 
 interface ProfileState {
@@ -29,21 +30,28 @@ const useProfileStore = create<ProfileState>((set) => ({
     set({ loading: true, error: null });
 
     const { data, error } = await supabase
-      .from('profiles')
-      .select('user_id, display_name, plan, subscription_status')
-      .eq('user_id', userId)
+      .from("profiles")
+      .select("user_id, display_name, plan, subscription_status, renewal_date")
+      .eq("user_id", userId)
       .single();
 
     // PGRST116 = no row found — create default profile
-    if (error && error.code === 'PGRST116') {
+    if (error && error.code === "PGRST116") {
       const { data: created, error: createError } = await supabase
-        .from('profiles')
-        .upsert({ user_id: userId, display_name: null, plan: 'free', subscription_status: 'active' })
-        .select('user_id, display_name, plan, subscription_status')
+        .from("profiles")
+        .upsert({
+          user_id: userId,
+          display_name: null,
+          plan: "free",
+          subscription_status: "active",
+        })
+        .select(
+          "user_id, display_name, plan, subscription_status, renewal_date",
+        )
         .single();
 
       if (createError) {
-        set({ loading: false, error: 'Failed to load profile.' });
+        set({ loading: false, error: "Failed to load profile." });
         return;
       }
       set({ loading: false, profile: created as Profile });
@@ -51,7 +59,7 @@ const useProfileStore = create<ProfileState>((set) => ({
     }
 
     if (error) {
-      set({ loading: false, error: 'Failed to load profile.' });
+      set({ loading: false, error: "Failed to load profile." });
       return;
     }
 
@@ -62,14 +70,14 @@ const useProfileStore = create<ProfileState>((set) => ({
     set({ saving: true, error: null });
 
     const { data, error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update({ display_name: displayName })
-      .eq('user_id', userId)
-      .select('user_id, display_name, plan, subscription_status')
+      .eq("user_id", userId)
+      .select("user_id, display_name, plan, subscription_status, renewal_date")
       .single();
 
     if (error) {
-      set({ saving: false, error: 'Failed to save profile.' });
+      set({ saving: false, error: "Failed to save profile." });
       return;
     }
 

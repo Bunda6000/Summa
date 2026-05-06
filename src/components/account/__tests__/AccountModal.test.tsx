@@ -38,6 +38,7 @@ const fakeProfile: Profile = {
   display_name: 'Alice',
   plan: 'free',
   subscription_status: 'active',
+  renewal_date: null,
 };
 
 beforeEach(() => {
