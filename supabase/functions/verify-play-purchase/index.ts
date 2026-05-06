@@ -200,22 +200,40 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Upsert subscription record — token is unique per purchase
+    // Upsert the per-user subscription state (used for feature gating)
     const { error: subError } = await adminClient.from('subscriptions').upsert(
       {
         user_id: userId,
-        purchase_token: token,
-        product_id: productId,
-        order_id: typeof orderId === 'string' ? orderId : null,
-        subscription_status: 'active',
-        renewal_date: renewalDate?.toISOString() ?? null,
+        status: 'active',
+        current_period_end: renewalDate?.toISOString() ?? null,
       },
-      { onConflict: 'purchase_token' },
+      { onConflict: 'user_id' },
     );
 
     if (subError) {
       console.error('Failed to upsert subscription:', subError);
       return json({ error: 'Failed to record subscription' }, 500);
+    }
+
+    // Record the individual purchase for the billing receipts UI.
+    // Upsert on purchase_token so re-verification of the same purchase is idempotent.
+    const { error: historyError } = await adminClient.from('purchase_history').upsert(
+      {
+        user_id: userId,
+        order_id: typeof orderId === 'string' ? orderId : '',
+        product_id: productId,
+        purchase_token: token,
+        status: 'purchased',
+        purchased_at: new Date().toISOString(),
+        expires_at: renewalDate?.toISOString() ?? null,
+      },
+      { onConflict: 'purchase_token' },
+    );
+
+    if (historyError) {
+      // Non-fatal — subscription is active; receipt recording failure should not
+      // block the user from accessing paid features.
+      console.warn('Failed to record purchase history:', historyError);
     }
 
     // Update profile — bypasses profiles_protect_plan trigger because we use

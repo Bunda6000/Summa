@@ -6,9 +6,10 @@ import styles from './AccountModal.module.css';
 
 interface Props {
   onClose: () => void;
+  onOpenBilling?: () => void;
 }
 
-export default function AccountModal({ onClose }: Props) {
+export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const { session, resendVerification, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
@@ -154,6 +155,18 @@ export default function AccountModal({ onClose }: Props) {
                   onClick={handleManageSubscription}
                 >
                   Manage Subscription
+                </button>
+              </div>
+            )}
+
+            {/* Billing & Receipts — available to all users */}
+            {onOpenBilling && (
+              <div className={styles.field}>
+                <button
+                  className={styles.manageSubBtn}
+                  onClick={onOpenBilling}
+                >
+                  Billing &amp; Receipts
                 </button>
               </div>
             )}
