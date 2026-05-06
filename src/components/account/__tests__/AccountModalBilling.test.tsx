@@ -36,6 +36,7 @@ const freeProfile: Profile = {
   display_name: 'Alice',
   plan: 'free',
   subscription_status: 'active',
+  renewal_date: null,
 };
 
 const paidProfile: Profile = {
@@ -43,6 +44,7 @@ const paidProfile: Profile = {
   display_name: 'Alice',
   plan: 'paid',
   subscription_status: 'active',
+  renewal_date: '2026-06-01T10:00:00Z',
 };
 
 beforeEach(() => {
