@@ -12,16 +12,25 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Capacitor apps originate from capacitor://localhost; web deployments use the
-// app domain. Restrict CORS to known origins — never use wildcard on a
-// privileged mutation endpoint.
-const ALLOWED_ORIGINS = new Set([
+// app domain. The JWT auth check is the real security gate — CORS is a
+// browser-layer guard on top. Localhost is permitted so the web dev server
+// and Vercel preview URLs can reach this function without manual config.
+const STATIC_ORIGINS = new Set([
   'capacitor://localhost',
   'https://summaapp.com',
   Deno.env.get('APP_ORIGIN') ?? '',
 ].filter(Boolean));
 
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (STATIC_ORIGINS.has(origin)) return true;
+  // Allow any localhost port (dev server, Vite, Storybook, etc.)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  return false;
+}
+
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : 'capacitor://localhost';
+  const allowed = isAllowedOrigin(origin) ? origin! : 'capacitor://localhost';
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

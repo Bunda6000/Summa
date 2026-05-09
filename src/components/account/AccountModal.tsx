@@ -32,6 +32,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) loadProfile(userId);
@@ -273,10 +274,12 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
             <div className={styles.dangerZone}>
               <button
                 className={styles.deleteBtn}
-                onClick={() => setDeleteDialogOpen(true)}
+                onClick={() => { setDeleteError(null); setDeleteDialogOpen(true); }}
+                disabled={authLoading}
               >
-                Delete Account
+                {authLoading ? 'Deleting…' : 'Delete Account'}
               </button>
+              {deleteError && <p className={styles.errorMsg} style={{ marginTop: 10 }}>{deleteError}</p>}
             </div>
 
             {/* Legal links */}
@@ -339,7 +342,12 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
           onConfirm={async () => {
             setDeleteDialogOpen(false);
             await deleteAccount();
-            if (!useAuthStore.getState().error) onClose();
+            const err = useAuthStore.getState().error;
+            if (!err) {
+              onClose();
+            } else {
+              setDeleteError(err);
+            }
           }}
           onCancel={() => setDeleteDialogOpen(false)}
         />
