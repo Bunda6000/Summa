@@ -44,9 +44,21 @@
   padding: 14px 28px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.headerLogo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.headerUtils {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .logo {
@@ -74,6 +86,7 @@
   padding: 3px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  margin-left: auto; /* pushes tabs+utils to the right on desktop */
 }
 
 .tab {
@@ -508,6 +521,40 @@
 }
 
 @media(max-width: 768px) {
+  /* Header: row 1 = logo + utils, row 2 = tabs full-width */
+  .headerInner {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .headerLogo {
+    flex: 1;   /* expands to fill row-1 space next to utils */
+    order: 1;
+    min-width: 0;
+  }
+
+  .logoSub {
+    display: none; /* hides subtitle so "Summa" + util buttons fit row 1 */
+  }
+
+  .headerUtils {
+    order: 2;  /* stays in row 1, after logo */
+  }
+
+  .tabs {
+    order: 3;           /* drops to row 2 */
+    margin-left: 0;     /* cancel the desktop auto margin */
+    flex-basis: 100%;   /* forces its own row */
+    width: 100%;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 9px 6px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
   .hideOnMobile {
     display: none !important;
   }
