@@ -50,6 +50,8 @@ beforeEach(() => {
     verificationError: null,
     recoveryMode: false,
     resetError: null,
+    emailSuccess: null,
+    emailError: null,
   });
   useProfileStore.setState({ profile: fakeProfile, loading: false, saving: false, error: null });
   vi.spyOn(useProfileStore.getState(), 'loadProfile').mockResolvedValue(undefined);

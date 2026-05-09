@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { removeStore } from '../storage';
 import { logEvent } from '../monitoring/logger';
 
 const LOCKOUT_THRESHOLD = 5;
@@ -40,15 +41,19 @@ interface AuthState {
   verificationError: string | null;
   recoveryMode: boolean;
   resetError: string | null;
+  emailSuccess: string | null;
+  emailError: string | null;
 
   initAuth: () => Promise<() => void>;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  updateEmail: (newEmail: string) => Promise<void>;
   resendVerification: (email: string) => Promise<void>;
   clearError: () => void;
   clearVerificationError: () => void;
+  clearEmailStatus: () => void;
   requestPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   clearResetError: () => void;
@@ -71,6 +76,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
   verificationError: _initialVerificationError,
   recoveryMode: false,
   resetError: _initialResetError,
+  emailSuccess: null,
+  emailError: null,
 
   initAuth: async () => {
     // Fallback URL detection — handles test environments where vi.stubGlobal
@@ -196,11 +203,27 @@ const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      await Promise.all([
+        removeStore('budget-app-v2'),
+        removeStore(`budget-app-v2-${session.user.id}`),
+        removeStore('budget-dark-mode'),
+      ]);
+
       await supabase.auth.signOut();
       set({ session: null, loading: false, error: null, failedAttempts: 0, lockedUntil: null });
     } catch {
       set({ loading: false, error: 'Failed to delete account. Please try again.' });
     }
+  },
+
+  updateEmail: async (newEmail) => {
+    set({ loading: true, emailError: null, emailSuccess: null });
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    if (error) {
+      set({ loading: false, emailError: error.message });
+      return;
+    }
+    set({ loading: false, emailSuccess: 'Verification email sent. Check your inbox to confirm the new address.' });
   },
 
   resendVerification: async (email) => {
@@ -261,6 +284,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set({ error: null, info: null }),
   clearVerificationError: () => set({ verificationError: null }),
+  clearEmailStatus: () => set({ emailSuccess: null, emailError: null }),
   clearResetError: () => set({ resetError: null }),
 }));
 

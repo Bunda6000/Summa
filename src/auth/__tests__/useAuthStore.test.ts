@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+vi.mock('../../storage', () => ({
+  removeStore: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock the Supabase client module before importing the store
 vi.mock('../../lib/supabase', () => ({
   supabase: {
@@ -22,6 +26,7 @@ vi.mock('../../lib/supabase', () => ({
 }));
 
 import { supabase } from '../../lib/supabase';
+import { removeStore } from '../../storage';
 import useAuthStore from '../useAuthStore';
 
 const mockSignUp = vi.mocked(supabase.auth.signUp);
@@ -294,11 +299,14 @@ describe('useAuthStore.initAuth — reset error detection', () => {
 });
 
 const mockFunctionsInvoke = vi.mocked(supabase.functions.invoke);
+const mockRemoveStore = vi.mocked(removeStore);
 
 describe('useAuthStore.deleteAccount', () => {
   beforeEach(() => {
     mockFunctionsInvoke.mockReset();
     mockSignOut.mockReset();
+    mockRemoveStore.mockReset();
+    mockRemoveStore.mockResolvedValue(undefined);
   });
 
   it('invokes the delete-account edge function with the user id', async () => {
@@ -353,6 +361,59 @@ describe('useAuthStore.deleteAccount', () => {
     expect(useAuthStore.getState().error).toMatch(/failed to delete account/i);
     expect(useAuthStore.getState().session).toEqual(fakeSession);
     expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('clears local storage keys after successful deletion', async () => {
+    mockFunctionsInvoke.mockResolvedValue({ data: { success: true }, error: null } as never);
+    mockSignOut.mockResolvedValue({ error: null } as never);
+
+    useAuthStore.setState({ session: { user: { id: 'user-123' } } as never });
+    await useAuthStore.getState().deleteAccount();
+
+    expect(mockRemoveStore).toHaveBeenCalledWith('budget-app-v2');
+    expect(mockRemoveStore).toHaveBeenCalledWith('budget-app-v2-user-123');
+    expect(mockRemoveStore).toHaveBeenCalledWith('budget-dark-mode');
+  });
+
+  it('does not clear local storage when the edge function returns an error', async () => {
+    mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: 'Deletion failed' } } as never);
+    useAuthStore.setState({ session: { user: { id: 'user-123' } } as never });
+
+    await useAuthStore.getState().deleteAccount();
+
+    expect(mockRemoveStore).not.toHaveBeenCalled();
+  });
+});
+
+describe('useAuthStore.updateEmail', () => {
+  beforeEach(() => {
+    mockUpdateUser.mockReset();
+  });
+
+  it('calls supabase.auth.updateUser with the new email', async () => {
+    mockUpdateUser.mockResolvedValue({ data: {}, error: null } as never);
+    await useAuthStore.getState().updateEmail('new@example.com');
+    expect(mockUpdateUser).toHaveBeenCalledWith({ email: 'new@example.com' });
+  });
+
+  it('sets emailSuccess on successful update', async () => {
+    mockUpdateUser.mockResolvedValue({ data: {}, error: null } as never);
+    await useAuthStore.getState().updateEmail('new@example.com');
+    expect(useAuthStore.getState().emailSuccess).toMatch(/verification email sent/i);
+    expect(useAuthStore.getState().emailError).toBeNull();
+  });
+
+  it('sets emailError and clears emailSuccess when Supabase returns an error', async () => {
+    mockUpdateUser.mockResolvedValue({ data: null, error: { message: 'Email address already in use' } } as never);
+    await useAuthStore.getState().updateEmail('taken@example.com');
+    expect(useAuthStore.getState().emailError).toMatch(/already in use/i);
+    expect(useAuthStore.getState().emailSuccess).toBeNull();
+  });
+
+  it('clears loading flag after completion', async () => {
+    mockUpdateUser.mockResolvedValue({ data: {}, error: null } as never);
+    await useAuthStore.getState().updateEmail('new@example.com');
+    expect(useAuthStore.getState().loading).toBe(false);
   });
 });
 

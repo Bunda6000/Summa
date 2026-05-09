@@ -298,6 +298,43 @@
   background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 
+.successMsg {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-light);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0;
+}
+
+.updateEmailBtn {
+  align-self: flex-start;
+  padding: 7px 14px;
+  background: none;
+  border: 1.5px solid var(--border-input);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 44px;
+}
+
+.updateEmailBtn:hover:not(:disabled) {
+  background: var(--chip);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.updateEmailBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .legalText {
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;

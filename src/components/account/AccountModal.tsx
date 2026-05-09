@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
@@ -17,20 +17,21 @@ interface Props {
 }
 
 export default function AccountModal({ onClose, onOpenBilling }: Props) {
-  const { session, signOut, resendVerification, deleteAccount, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
+  const { session, signOut, resendVerification, deleteAccount, updateEmail, clearEmailStatus, loading: authLoading, error: authError, info: authInfo, emailSuccess, emailError } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
 
+  const userId = session?.user.id ?? '';
+  const email = session?.user.email ?? '';
+  const isEmailVerified = !!session?.user.email_confirmed_at;
+
+  const [emailInput, setEmailInput] = useState(email);
   const [displayName, setDisplayName] = useState('');
   const [migrateLegacy, setMigrateLegacy] = useState<AppData | null>(null);
   const [showMigrationPanel, setShowMigrationPanel] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const userId = session?.user.id ?? '';
-  const email = session?.user.email ?? '';
-  const isEmailVerified = !!session?.user.email_confirmed_at;
 
   useEffect(() => {
     if (userId) loadProfile(userId);
@@ -43,6 +44,17 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   useEffect(() => {
     if (profile?.display_name) setDisplayName(profile.display_name);
   }, [profile?.display_name]);
+
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEmailInput(e.target.value);
+    if (emailSuccess || emailError) clearEmailStatus();
+  };
+
+  const handleUpdateEmail = async () => {
+    const trimmed = emailInput.trim();
+    if (!trimmed || trimmed === email) return;
+    await updateEmail(trimmed);
+  };
 
   const handleSave = async () => {
     if (!userId) return;
@@ -107,13 +119,30 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               </div>
             )}
 
-            {/* Email — read only */}
+            {/* Email — editable */}
             <div className={styles.field}>
-              <span className={styles.label}>Email</span>
-              <span className={styles.value}>{email}</span>
+              <label htmlFor="email" className={styles.label}>Email</label>
+              <input
+                id="email"
+                aria-label="Email"
+                type="email"
+                value={emailInput}
+                onChange={handleEmailChange}
+                className={styles.input}
+                disabled={authLoading}
+              />
               <span className={styles.hint}>
-                To change your email, re-verification is required — please contact support.
+                A confirmation email will be sent to verify the new address.
               </span>
+              {emailSuccess && <p className={styles.successMsg}>{emailSuccess}</p>}
+              {emailError && <p className={styles.verifyError}>{emailError}</p>}
+              <button
+                className={styles.updateEmailBtn}
+                onClick={handleUpdateEmail}
+                disabled={authLoading || !emailInput.trim() || emailInput.trim() === email}
+              >
+                {authLoading ? 'Updating…' : 'Update Email'}
+              </button>
             </div>
 
             {/* Display name — editable */}
