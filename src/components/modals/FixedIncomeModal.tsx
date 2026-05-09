@@ -48,7 +48,7 @@ export default function FixedIncomeModal({ src, onSave, onClose }: FixedIncomeMo
           const { y, m } = parseMk(r.effectiveFrom);
           return (
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", background: "var(--chip2)", padding: 10, borderRadius: 10, flexWrap: "wrap" }}>
-              <input type="number" value={r.amount} onChange={e => updateRec(i, "amount", e.target.value)} placeholder="Amount" style={{ flex: 1, minWidth: 80 }} />
+              <input type="text" inputMode="decimal" value={r.amount} onChange={e => updateRec(i, "amount", e.target.value)} placeholder="Amount" style={{ flex: 1, minWidth: 80 }} />
               <span style={{ fontSize: 12, color: "var(--muted)" }}>from</span>
               <select value={m} onChange={e => updateRec(i, "effectiveFrom", mk(y, +e.target.value))} style={{ width: 75 }}>
                 {MONTHS.map((mn, mi) => <option key={mi} value={mi}>{mn}</option>)}
