@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SyncStatusIndicator from './components/SyncStatusIndicator';
 import { mk, parseMk, today, fmtDate, getCY, getCM, MIN_YEAR, MONTHS } from './utils/dates';
 import { fmt } from './utils/formatters';
 import { reorder } from './utils/expressions';
@@ -22,6 +23,7 @@ import CategoryFormModal from './components/modals/CategoryFormModal';
 import FixedIncomeModal from './components/modals/FixedIncomeModal';
 import VarIncomeModal from './components/modals/VarIncomeModal';
 import LockedFeature from './components/subscription/LockedFeature';
+import GracePeriodBanner from './components/billing/GracePeriodBanner';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -117,7 +119,7 @@ export default function BudgetApp() {
   const { categories = [], expenses = {}, fixedIncomes = [], variableIncomes = [], loanTypes = [], loanPaid = {} } = appData || {};
 
   if (!introDone) return (
-    <div style={{background:'#0A0A10',minHeight:'100vh',position:'relative',overflow:'hidden'}}>
+    <div style={{background:'#0A0A10',minHeight:'100dvh',position:'relative',overflow:'hidden'}}>
       <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
       <IntroSequence onComplete={() => setIntroDone(true)} />
     </div>
@@ -178,6 +180,8 @@ export default function BudgetApp() {
           </div>
         </div>
       </header>
+
+      <GracePeriodBanner />
 
       <main className={`main-area ${styles.main}`}>
 
@@ -807,6 +811,7 @@ export default function BudgetApp() {
           </div>
         </div>
       )}
+      <SyncStatusIndicator />
     </div>
   );
 }

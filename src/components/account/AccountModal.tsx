@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react';
 import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
+import useSubscriptionStore from '../../subscription/useSubscriptionStore';
+import ConfirmDialog from './ConfirmDialog';
+import { LEGAL_URLS } from '../../constants';
 import styles from './AccountModal.module.css';
+import { detectLegacyData } from '../../migration/migrateLocalData';
+import MigrationPanel from '../migration/MigrationPanel';
+import type { AppData } from '../../types';
 
 interface Props {
   onClose: () => void;
@@ -10,11 +16,14 @@ interface Props {
 }
 
 export default function AccountModal({ onClose, onOpenBilling }: Props) {
-  const { session, resendVerification, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
+  const { session, resendVerification, deleteAccount, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
 
   const [displayName, setDisplayName] = useState('');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const userId = session?.user.id ?? '';
   const email = session?.user.email ?? '';
@@ -116,6 +125,36 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               />
             </div>
 
+            {migrateLegacy && !showMigrationPanel && (
+              <section style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Offline Data</h3>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+                  You have local data that hasn't been imported yet.
+                </p>
+                <button
+                  onClick={() => setShowMigrationPanel(true)}
+                  style={{ fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Migrate offline data →
+                </button>
+              </section>
+            )}
+            {migrateLegacy && showMigrationPanel && (
+              <section style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <MigrationPanel
+                  userId={userId}
+                  legacyData={migrateLegacy}
+                  onComplete={async () => {
+                    setMigrateLegacy(null);
+                    setShowMigrationPanel(false);
+                    useBudgetStore.getState().resetStore();
+                    if (userId) await useBudgetStore.getState().initStore(userId);
+                  }}
+                  onSkip={() => setShowMigrationPanel(false)}
+                />
+              </section>
+            )}
+
             {/* Plan */}
             <div className={styles.field}>
               <span className={styles.label}>Plan</span>
@@ -185,9 +224,82 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
+
+            {/* Delete account — danger zone */}
+            <div className={styles.dangerZone}>
+              <button
+                className={styles.deleteBtn}
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete Account
+              </button>
+            </div>
+
+            {/* Legal links */}
+            <p className={styles.legalText}>
+              <a
+                href={LEGAL_URLS.privacy}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.legalLink}
+              >
+                Privacy Policy
+              </a>
+              {' · '}
+              <a
+                href={LEGAL_URLS.terms}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.legalLink}
+              >
+                Terms of Service
+              </a>
+            </p>
           </>
         )}
       </div>
+
+      {cancelDialogOpen && (
+        <ConfirmDialog
+          title="Cancel Subscription?"
+          message="Your subscription will remain active until the end of the billing period. To cancel, you'll be taken to Google Play."
+          confirmLabel="Go to Google Play"
+          cancelLabel="Keep Subscription"
+          onConfirm={async () => {
+            setCancelDialogOpen(false);
+            await openManageSubscription();
+          }}
+          onCancel={() => setCancelDialogOpen(false)}
+        />
+      )}
+
+      {downgradeDialogOpen && (
+        <ConfirmDialog
+          title="Change Plan?"
+          message="To change your plan, you'll be taken to Google Play."
+          confirmLabel="Go to Google Play"
+          cancelLabel="Keep Plan"
+          onConfirm={async () => {
+            setDowngradeDialogOpen(false);
+            await openManageSubscription();
+          }}
+          onCancel={() => setDowngradeDialogOpen(false)}
+        />
+      )}
+
+      {deleteDialogOpen && (
+        <ConfirmDialog
+          title="Delete Account?"
+          message="This will permanently delete your account and all your data. This action cannot be undone."
+          confirmLabel="Delete Forever"
+          onConfirm={async () => {
+            setDeleteDialogOpen(false);
+            await deleteAccount();
+            if (!useAuthStore.getState().error) onClose();
+          }}
+          onCancel={() => setDeleteDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }

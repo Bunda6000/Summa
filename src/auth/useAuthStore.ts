@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { logEvent } from '../monitoring/logger';
 
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
@@ -44,6 +45,7 @@ interface AuthState {
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   resendVerification: (email: string) => Promise<void>;
   clearError: () => void;
   clearVerificationError: () => void;
@@ -135,6 +137,12 @@ const useAuthStore = create<AuthState>((set, get) => ({
       const newAttempts = get().failedAttempts + 1;
 
       if (isRateLimitError(msg)) {
+        logEvent({
+          event_type: 'auth_lockout',
+          severity: 'critical',
+          message: 'Rate limit hit — account temporarily blocked',
+          metadata: { attempts: newAttempts, reason: 'rate_limit' },
+        });
         set({
           loading: false,
           error: 'Too many attempts — temporarily blocked. Please wait before trying again.',
@@ -145,6 +153,16 @@ const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const nextLocked = newAttempts >= LOCKOUT_THRESHOLD ? Date.now() + LOCKOUT_DURATION_MS : null;
+
+      logEvent({
+        event_type: nextLocked ? 'auth_lockout' : 'auth_failure',
+        severity: nextLocked ? 'critical' : 'warn',
+        message: nextLocked
+          ? `Account locked after ${newAttempts} failed attempts`
+          : `Sign-in failed (attempt ${newAttempts})`,
+        metadata: { attempts: newAttempts, locked: !!nextLocked },
+      });
+
       set({
         loading: false,
         error: msg,
@@ -161,6 +179,28 @@ const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true });
     await supabase.auth.signOut();
     set({ session: null, loading: false, error: null, failedAttempts: 0, lockedUntil: null });
+  },
+
+  deleteAccount: async () => {
+    const { session } = get();
+    if (!session) return;
+
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase.functions.invoke('delete-account', {
+        body: { userId: session.user.id },
+      });
+
+      if (error) {
+        set({ loading: false, error: error.message });
+        return;
+      }
+
+      await supabase.auth.signOut();
+      set({ session: null, loading: false, error: null, failedAttempts: 0, lockedUntil: null });
+    } catch {
+      set({ loading: false, error: 'Failed to delete account. Please try again.' });
+    }
   },
 
   resendVerification: async (email) => {
