@@ -45,6 +45,7 @@ describe('MigrationPanel', () => {
     render(<MigrationPanel {...defaultProps} />);
     await userEvent.click(screen.getByRole('button', { name: /migrate my data/i }));
     expect(screen.getByText(/migrating/i)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /migrate my data/i })).not.toBeInTheDocument();
   });
 

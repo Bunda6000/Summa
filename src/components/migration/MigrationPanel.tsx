@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { runMigration } from '../../migration/migrateLocalData';
 import type { AppData } from '../../types';
 
-type PanelState = 'prompt' | 'migrating' | 'success' | 'error';
+type PanelState =
+  | { status: 'prompt' }
+  | { status: 'migrating' }
+  | { status: 'success'; winner: AppData }
+  | { status: 'error' };
 
 interface Props {
   userId: string;
@@ -12,47 +16,45 @@ interface Props {
 }
 
 export default function MigrationPanel({ userId, legacyData, onComplete, onSkip }: Props) {
-  const [state, setState] = useState<PanelState>('prompt');
-  const [winner, setWinner] = useState<AppData | null>(null);
+  const [panelState, setPanelState] = useState<PanelState>({ status: 'prompt' });
 
   const migrate = async () => {
-    setState('migrating');
+    setPanelState({ status: 'migrating' });
     try {
       const result = await runMigration(userId, legacyData);
-      setWinner(result);
-      setState('success');
+      setPanelState({ status: 'success', winner: result });
     } catch {
-      setState('error');
+      setPanelState({ status: 'error' });
     }
   };
 
-  if (state === 'prompt') return (
+  if (panelState.status === 'prompt') return (
     <div>
       <h2>Import Your Data</h2>
       <p>You have offline data from before sign-in. Import it into your account?</p>
-      <button onClick={migrate}>Migrate my data</button>
+      <button onClick={migrate} disabled={panelState.status === 'migrating'}>Migrate my data</button>
       <button onClick={onSkip}>Not now</button>
     </div>
   );
 
-  if (state === 'migrating') return (
+  if (panelState.status === 'migrating') return (
     <div>
-      <div aria-label="Loading" />
+      <div role="status" aria-label="Loading" />
       <p>Migrating your data...</p>
     </div>
   );
 
-  if (state === 'success') return (
+  if (panelState.status === 'success') return (
     <div>
       <p>All done! Your offline data has been imported.</p>
-      <button onClick={() => onComplete(winner!)}>Continue to app</button>
+      <button onClick={() => onComplete(panelState.winner)}>Continue to app</button>
     </div>
   );
 
   return (
     <div>
       <p>Something went wrong. Your local data is safe.</p>
-      <button onClick={migrate}>Retry</button>
+      <button onClick={migrate} disabled={panelState.status === 'migrating'}>Retry</button>
       <button onClick={onSkip}>Skip for now</button>
     </div>
   );
