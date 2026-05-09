@@ -88,4 +88,14 @@ describe('SignUpForm', () => {
     await userEvent.click(screen.getByRole('button', { name: /create account/i }));
     expect(screen.getByRole('button', { name: /creating/i })).toBeDisabled();
   });
+
+  it('shows a Privacy Policy link', () => {
+    render(<SignUpForm onSwitchToSignIn={vi.fn()} />);
+    expect(screen.getByRole('link', { name: /privacy policy/i })).toBeInTheDocument();
+  });
+
+  it('shows a Terms of Service link', () => {
+    render(<SignUpForm onSwitchToSignIn={vi.fn()} />);
+    expect(screen.getByRole('link', { name: /terms of service/i })).toBeInTheDocument();
+  });
 });

@@ -52,4 +52,16 @@ describe('validatePassword', () => {
     expect(result).not.toBeNull();
     expect(result.message).toMatch(/number/i);
   });
+
+  it('rejects password with no special character', () => {
+    const result = validatePassword('Password1') as PasswordError;
+    expect(result).not.toBeNull();
+    expect(result.message).toMatch(/special character/i);
+  });
+
+  it('accepts password with all required elements including special character', () => {
+    expect(validatePassword('Secure1!')).toBeNull();
+    expect(validatePassword('P@ssw0rd')).toBeNull();
+    expect(validatePassword('Hello#9world')).toBeNull();
+  });
 });

@@ -24,8 +24,8 @@ describe('ConfirmDialog', () => {
   });
 
   it('renders a cancel / dismiss button', () => {
-    render(<ConfirmDialog {...defaultProps} />);
-    expect(screen.getByRole('button', { name: /keep subscription|go back|dismiss/i })).toBeInTheDocument();
+    render(<ConfirmDialog {...defaultProps} cancelLabel="Keep Subscription" />);
+    expect(screen.getByRole('button', { name: /keep subscription/i })).toBeInTheDocument();
   });
 
   it('calls onConfirm when the confirm button is clicked', async () => {
@@ -37,9 +37,8 @@ describe('ConfirmDialog', () => {
 
   it('calls onCancel when the dismiss button is clicked', async () => {
     const onCancel = vi.fn();
-    render(<ConfirmDialog {...defaultProps} onCancel={onCancel} />);
-    const dismissBtn = screen.getByRole('button', { name: /keep subscription|go back|dismiss/i });
-    await userEvent.click(dismissBtn);
+    render(<ConfirmDialog {...defaultProps} cancelLabel="Keep Subscription" onCancel={onCancel} />);
+    await userEvent.click(screen.getByRole('button', { name: /keep subscription/i }));
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
@@ -53,5 +52,10 @@ describe('ConfirmDialog', () => {
   it('uses a default confirm label when none is provided', () => {
     render(<ConfirmDialog title="Confirm" message="Are you sure?" onConfirm={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByRole('button', { name: /confirm/i })).toBeInTheDocument();
+  });
+
+  it('uses "Cancel" as the default cancel label when none is provided', () => {
+    render(<ConfirmDialog title="Confirm" message="Are you sure?" onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument();
   });
 });
