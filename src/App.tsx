@@ -153,18 +153,23 @@ export default function BudgetApp() {
       {/* HEADER */}
       <header className={styles.header} style={{boxShadow:"var(--header-shadow)"}}>
         <div className={`header-inner ${styles.headerInner}`}>
-          <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+          {/* Logo — row 1 col 1 on mobile */}
+          <div className={styles.headerLogo}>
             <h1 className={styles.logo}>Summa</h1>
             <span className={styles.logoSub}>personal finance, clearly</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <nav className={styles.tabs}>
-              {([ ["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"] ] as [string,string][]).map(([k,label])=>(
-                <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} className={`tab-btn ${styles.tab} ${tab===k ? styles.tabActive : ''}`} style={{touchAction:"manipulation"}}>
-                  {label}
-                </button>
-              ))}
-            </nav>
+
+          {/* Nav tabs — row 2 on mobile (full-width), inline on desktop */}
+          <nav className={styles.tabs}>
+            {([ ["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"] ] as [string,string][]).map(([k,label])=>(
+              <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} className={`tab-btn ${styles.tab} ${tab===k ? styles.tabActive : ''}`} style={{touchAction:"manipulation"}}>
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Utility buttons — row 1 col 2 on mobile */}
+          <div className={styles.headerUtils}>
             <button onClick={toggleDark} title={dark?"Light mode":"Dark mode"}
               style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 12px",cursor:"pointer",fontSize:18,lineHeight:1,transition:"all .35s cubic-bezier(.22,1,.36,1)",minWidth:44,minHeight:44,display:"flex",alignItems:"center",justifyContent:"center",transform:dark?"rotate(180deg)":"rotate(0deg)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
               {dark ? "☀" : "☾"}
