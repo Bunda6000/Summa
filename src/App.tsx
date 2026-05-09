@@ -178,10 +178,6 @@ export default function BudgetApp() {
               style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:44,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
               Account
             </button>
-            <button onClick={signOut} title="Logout"
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:44,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
-              Logout
-            </button>
           </div>
         </div>
       </header>
@@ -522,7 +518,59 @@ export default function BudgetApp() {
                             className={styles.btnSmall} style={{color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
                         </div>
                       )}
-                      <div className={styles.listWrap} style={{overflowX:"auto"}}>
+
+                      {/* Mobile card list — shown only on small screens */}
+                      <div className={styles.mobileListWrap}>
+                        {MONTHS.map((mName, mi) => {
+                          const key = mk(expYear, mi);
+                          const entry = expenses?.[cat.id]?.[key] || null;
+                          const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
+                          const isCurrent = expYear === getCY() && mi === getCM();
+                          const totalAmt = hasSubs
+                            ? (cat.subcategories||[]).reduce((s,sc) => s + (entry?.subAmounts?.[sc.id]||0), 0) || (entry?.amount||0)
+                            : (entry?.amount||0);
+                          const subAmounts = entry?.subAmounts || {};
+                          const subIds = hasSubs ? Object.keys(subAmounts).filter(id => (subAmounts[id]||0) > 0) : [];
+                          const paidCount = subIds.filter(id => entry?.subPaid?.[id]?.paid).length;
+                          const fullyPaid = hasSubs ? (subIds.length > 0 && paidCount === subIds.length) : !!entry?.paid;
+                          const partialPaid = hasSubs && paidCount > 0 && !fullyPaid;
+
+                          let pillText = "+ Add";
+                          let pillColor = "var(--faintest)";
+                          let pillBg = "transparent";
+                          let pillBorder = "1px solid var(--border)";
+                          if (fullyPaid) {
+                            pillText = "Paid"; pillColor = "var(--accent)"; pillBg = "var(--accent-bg)"; pillBorder = "1px solid var(--accent-light)";
+                          } else if (partialPaid) {
+                            pillText = `${paidCount}/${subIds.length} paid`; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                          } else if (totalAmt > 0) {
+                            pillText = "Unpaid"; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                          }
+
+                          return (
+                            <div key={mi}
+                              className={`stagger-row ${styles.mobileRow} ${isCurrent ? styles.mobileRowCurrent : ''}`}
+                              onClick={() => setModal({type:"editExp",catId:cat.id,catObj:cat,monthKey:key,monthLabel:`${mName} ${expYear}`,entry})}
+                              style={{opacity: isPast && !entry ? 0.45 : 1, animationDelay:`${mi*20}ms`}}>
+                              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                  <span style={{fontWeight:700,fontSize:14,color:isCurrent?"var(--accent)":"var(--text)"}}>{mName}</span>
+                                  {isCurrent && <span className={styles.nowBadge}>now</span>}
+                                </div>
+                                <span style={{fontSize:12,fontWeight:600,color:pillColor,background:pillBg,padding:"3px 10px",borderRadius:20,border:pillBorder}}>
+                                  {pillText}
+                                </span>
+                              </div>
+                              <div style={{marginTop:6,fontSize:20,fontWeight:700,color:totalAmt>0?"var(--text)":"var(--faint)"}}>
+                                {totalAmt > 0 ? fmt(totalAmt) : "—"}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Desktop table — hidden on mobile */}
+                      <div className={`${styles.listWrap} ${styles.desktopListWrap}`} style={{overflowX:"auto"}}>
                         <div className={styles.listHeader}>
                           <span style={{width:30}} onClick={e=>e.stopPropagation()}>
                             {filledKeys.length > 0 && (
