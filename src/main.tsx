@@ -6,6 +6,9 @@ import useBudgetStore from './store/useBudgetStore';
 import useAuthStore from './auth/useAuthStore';
 import useSubscriptionStore from './subscription/useSubscriptionStore';
 import AuthScreen from './components/auth/AuthScreen';
+import MigrationScreen from './components/migration/MigrationScreen';
+import { detectLegacyData } from './migration/migrateLocalData';
+import type { AppData } from './types';
 
 useBudgetStore.subscribe(
   (state) => state.dark,
@@ -19,6 +22,8 @@ function Root() {
   const { initStore, resetStore, initialized } = useBudgetStore();
   const { initSubscription, resetSubscription } = useSubscriptionStore();
   const [authReady, setAuthReady] = useState(false);
+  const [migrationPending, setMigrationPending] = useState(false);
+  const [legacyData, setLegacyData] = useState<AppData | null>(null);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -30,17 +35,48 @@ function Root() {
   }, [initAuth]);
 
   useEffect(() => {
+    if (!session) return;
+    detectLegacyData().then(data => {
+      if (data) {
+        setLegacyData(data);
+        setMigrationPending(true);
+      }
+    });
+  }, [session]);
+
+  useEffect(() => {
     if (!session) {
       resetStore();
       resetSubscription();
       return;
     }
+    if (migrationPending) return;
     initStore(session.user.id);
     initSubscription(session.user.id);
-  }, [session, initStore, resetStore, initSubscription, resetSubscription]);
+  }, [session, migrationPending, initStore, resetStore, initSubscription, resetSubscription]);
+
+  const handleMigrationComplete = (_winner: AppData) => {
+    setMigrationPending(false);
+    setLegacyData(null);
+  };
+
+  const handleMigrationSkip = () => {
+    setMigrationPending(false);
+    setLegacyData(null);
+  };
 
   if (!authReady) return null;
   if (!session) return <AuthScreen />;
+  if (migrationPending && legacyData) {
+    return (
+      <MigrationScreen
+        userId={session.user.id}
+        legacyData={legacyData}
+        onComplete={handleMigrationComplete}
+        onSkip={handleMigrationSkip}
+      />
+    );
+  }
   if (!initialized) return null;
   return <BudgetApp />;
 }
