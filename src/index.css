@@ -1,3 +1,7 @@
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
 :root, [data-theme="light"] {
   --bg:#F2F0EC; --card:rgba(255,255,255,0.72); --card-solid:#FFFFFF; --card-alt:rgba(248,246,243,0.8); --card-hover:rgba(240,238,234,0.9);
   --border:rgba(0,0,0,0.07); --border-light:rgba(0,0,0,0.035); --border-input:rgba(0,0,0,0.13);
