@@ -119,7 +119,7 @@ export default function BudgetApp() {
   const { categories = [], expenses = {}, fixedIncomes = [], variableIncomes = [], loanTypes = [], loanPaid = {} } = appData || {};
 
   if (!introDone) return (
-    <div style={{background:'#0A0A10',minHeight:'100vh',position:'relative',overflow:'hidden'}}>
+    <div style={{background:'#0A0A10',minHeight:'100dvh',position:'relative',overflow:'hidden'}}>
       <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
       <IntroSequence onComplete={() => setIntroDone(true)} />
     </div>

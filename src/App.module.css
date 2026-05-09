@@ -99,7 +99,8 @@
 
 .main {
   margin: 0 auto;
-  padding: 28px 28px 60px;
+  padding: 28px 28px calc(60px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
 }
 
 .catSidebar {
