@@ -160,21 +160,21 @@ export default function BudgetApp() {
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <nav className={styles.tabs}>
               {([ ["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"] ] as [string,string][]).map(([k,label])=>(
-                <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} className={`${styles.tab} ${tab===k ? styles.tabActive : ''}`}>
+                <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} className={`tab-btn ${styles.tab} ${tab===k ? styles.tabActive : ''}`} style={{touchAction:"manipulation"}}>
                   {label}
                 </button>
               ))}
             </nav>
             <button onClick={toggleDark} title={dark?"Light mode":"Dark mode"}
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 12px",cursor:"pointer",fontSize:18,lineHeight:1,transition:"all .35s cubic-bezier(.22,1,.36,1)",minWidth:42,minHeight:42,display:"flex",alignItems:"center",justifyContent:"center",transform:dark?"rotate(180deg)":"rotate(0deg)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 12px",cursor:"pointer",fontSize:18,lineHeight:1,transition:"all .35s cubic-bezier(.22,1,.36,1)",minWidth:44,minHeight:44,display:"flex",alignItems:"center",justifyContent:"center",transform:dark?"rotate(180deg)":"rotate(0deg)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
               {dark ? "☀" : "☾"}
             </button>
             <button onClick={() => setShowAccount(true)} title="Account"
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:44,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
               Account
             </button>
             <button onClick={signOut} title="Logout"
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:44,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
               Logout
             </button>
           </div>
@@ -382,7 +382,7 @@ export default function BudgetApp() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => setModal({type:"addCat"})} className={`btn-hover ${styles.btnGhost}`} style={{width:"100%",marginTop:8,fontSize:11,padding:"6px 10px"}}>+ Add Category</button>
+              <button onClick={() => setModal({type:"addCat"})} className={`btn-hover ${styles.btnGhost} ${styles.hideOnMobile}`} style={{width:"100%",marginTop:8,fontSize:11,padding:"6px 10px"}}>+ Add Category</button>
             </div>
 
             {/* Right content */}
@@ -609,7 +609,7 @@ export default function BudgetApp() {
                   <h2 className={styles.sectionTitle}>Fixed Incomes</h2>
                   <p className={styles.sectionSub}>Recurring monthly income. Schedule future raises by adding a new amount record with a future effective date.</p>
                 </div>
-                <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`}>+ Add Source</button>
+                <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary} ${styles.hideOnMobile}`}>+ Add Source</button>
               </div>
               {fixedIncomes.length === 0 ? (
                 <div className={styles.emptyState}>
@@ -666,7 +666,7 @@ export default function BudgetApp() {
                   <h2 className={styles.sectionTitle}>Variable Incomes</h2>
                   <p className={styles.sectionSub}>One-time or irregular income assigned to a specific month.</p>
                 </div>
-                <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`}>+ Add Entry</button>
+                <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary} ${styles.hideOnMobile}`}>+ Add Entry</button>
               </div>
               {variableIncomes.length === 0 ? (
                 <div className={styles.emptyState}>
@@ -811,6 +811,21 @@ export default function BudgetApp() {
           </div>
         </div>
       )}
+      {/* Mobile thumb-zone action bar — only shown on small screens for tabs with add actions */}
+      {(tab === "incomes" || tab === "expenses") && (
+        <div className={styles.mobileActionBar}>
+          {tab === "incomes" && (
+            <>
+              <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Fixed</button>
+              <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Variable</button>
+            </>
+          )}
+          {tab === "expenses" && (
+            <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Add Category</button>
+          )}
+        </div>
+      )}
+
       <SyncStatusIndicator />
     </div>
   );
