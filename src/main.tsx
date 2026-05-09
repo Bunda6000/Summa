@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import BudgetApp from './App';
@@ -24,6 +24,7 @@ function Root() {
   const [authReady, setAuthReady] = useState(false);
   const [migrationPending, setMigrationPending] = useState(false);
   const [legacyData, setLegacyData] = useState<AppData | null>(null);
+  const migrationChecked = useRef(false);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -35,7 +36,12 @@ function Root() {
   }, [initAuth]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session) {
+      migrationChecked.current = false;  // reset on sign-out for fresh sign-in
+      return;
+    }
+    if (migrationChecked.current) return;
+    migrationChecked.current = true;
     detectLegacyData().then(data => {
       if (data) {
         setLegacyData(data);
@@ -55,6 +61,7 @@ function Root() {
     initSubscription(session.user.id);
   }, [session, migrationPending, initStore, resetStore, initSubscription, resetSubscription]);
 
+  // _winner already persisted by runMigration; initStore re-hydrates from local storage
   const handleMigrationComplete = (_winner: AppData) => {
     setMigrationPending(false);
     setLegacyData(null);

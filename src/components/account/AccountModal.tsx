@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
+import useBudgetStore from '../../store/useBudgetStore';
 import styles from './AccountModal.module.css';
 import { detectLegacyData } from '../../migration/migrateLocalData';
 import MigrationPanel from '../migration/MigrationPanel';
@@ -144,7 +145,12 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                 <MigrationPanel
                   userId={userId}
                   legacyData={migrateLegacy}
-                  onComplete={() => { setMigrateLegacy(null); setShowMigrationPanel(false); }}
+                  onComplete={async () => {
+                    setMigrateLegacy(null);
+                    setShowMigrationPanel(false);
+                    useBudgetStore.getState().resetStore();
+                    if (userId) await useBudgetStore.getState().initStore(userId);
+                  }}
                   onSkip={() => setShowMigrationPanel(false)}
                 />
               </section>
