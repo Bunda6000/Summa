@@ -120,6 +120,35 @@ describe('AccountModal — delete account', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('shows the error message in the danger zone when deletion fails', async () => {
+    const mockDelete = vi.fn().mockImplementation(async () => {
+      useAuthStore.setState({ error: 'Failed to delete account. Please try again.' });
+    });
+    vi.spyOn(useAuthStore.getState(), 'deleteAccount').mockImplementation(mockDelete);
+
+    render(<AccountModal onClose={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    await userEvent.click(screen.getByRole('button', { name: /delete forever/i }));
+
+    await waitFor(() => expect(screen.getByText(/failed to delete account/i)).toBeInTheDocument());
+  });
+
+  it('clears the delete error when the Delete Account button is clicked again', async () => {
+    const mockDelete = vi.fn().mockImplementation(async () => {
+      useAuthStore.setState({ error: 'Failed to delete account. Please try again.' });
+    });
+    vi.spyOn(useAuthStore.getState(), 'deleteAccount').mockImplementation(mockDelete);
+
+    render(<AccountModal onClose={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    await userEvent.click(screen.getByRole('button', { name: /delete forever/i }));
+    await waitFor(() => expect(screen.getByText(/failed to delete account/i)).toBeInTheDocument());
+
+    // Click Delete Account again — error clears, dialog re-opens
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    expect(screen.queryByText(/failed to delete account/i)).toBeNull();
+  });
+
   it('shows a Privacy Policy link', () => {
     render(<AccountModal onClose={vi.fn()} />);
     expect(screen.getByRole('link', { name: /privacy policy/i })).toBeInTheDocument();
