@@ -38,6 +38,7 @@ const paidActiveProfile: Profile = {
   display_name: 'Alice',
   plan: 'paid',
   subscription_status: 'active',
+  renewal_date: null,
 };
 
 const paidCancelledProfile: Profile = {
@@ -45,6 +46,7 @@ const paidCancelledProfile: Profile = {
   display_name: 'Alice',
   plan: 'paid',
   subscription_status: 'cancelled',
+  renewal_date: null,
 };
 
 const fakeExpiryDate = '2026-06-01T00:00:00Z';

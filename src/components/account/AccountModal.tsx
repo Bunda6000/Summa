@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
+import useSubscriptionStore from '../../subscription/useSubscriptionStore';
+import ConfirmDialog from './ConfirmDialog';
 import styles from './AccountModal.module.css';
 
 interface Props {
@@ -13,8 +15,11 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const { session, resendVerification, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
+  const { rawStatus, currentPeriodEnd } = useSubscriptionStore();
 
   const [displayName, setDisplayName] = useState('');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
 
   const userId = session?.user.id ?? '';
   const email = session?.user.email ?? '';
@@ -54,6 +59,18 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
       : profile?.subscription_status === 'cancelled'
       ? 'Cancelled'
       : 'Past Due';
+
+  const isPaidPlan = profile?.plan === 'paid';
+  const isActiveSubscription = profile?.subscription_status === 'active';
+  const isPendingCancellation = isPaidPlan && rawStatus === 'canceled';
+
+  const expiryDateStr = currentPeriodEnd
+    ? new Date(currentPeriodEnd).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null;
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Account">
@@ -130,6 +147,13 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               <span className={styles.value}>{statusLabel}</span>
             </div>
 
+            {/* Pending cancellation notice */}
+            {isPendingCancellation && expiryDateStr && (
+              <div className={styles.field}>
+                <p className={styles.hint}>Access ends on {expiryDateStr}.</p>
+              </div>
+            )}
+
             {/* Upgrade — guarded by email verification and billing state */}
             {profile?.plan === 'free' && (
               <div className={styles.field}>
@@ -148,13 +172,37 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
             )}
 
             {/* Manage Subscription — only shown for paid users */}
-            {profile?.plan === 'paid' && (
+            {isPaidPlan && (
               <div className={styles.field}>
                 <button
                   className={styles.manageSubBtn}
                   onClick={handleManageSubscription}
                 >
                   Manage Subscription
+                </button>
+              </div>
+            )}
+
+            {/* Change plan / downgrade via Google Play — only shown for paid users */}
+            {isPaidPlan && (
+              <div className={styles.field}>
+                <button
+                  className={styles.manageSubBtn}
+                  onClick={() => setDowngradeDialogOpen(true)}
+                >
+                  Change plan in Google Play
+                </button>
+              </div>
+            )}
+
+            {/* Cancel Subscription — only for active paid subscribers without pending cancellation */}
+            {isPaidPlan && isActiveSubscription && !isPendingCancellation && (
+              <div className={styles.field}>
+                <button
+                  className={styles.manageSubBtn}
+                  onClick={() => setCancelDialogOpen(true)}
+                >
+                  Cancel Subscription
                 </button>
               </div>
             )}
@@ -188,6 +236,32 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
           </>
         )}
       </div>
+
+      {cancelDialogOpen && (
+        <ConfirmDialog
+          title="Cancel Subscription?"
+          message="Your subscription will remain active until the end of the billing period. To cancel, you'll be taken to Google Play."
+          confirmLabel="Go to Google Play"
+          onConfirm={async () => {
+            setCancelDialogOpen(false);
+            await openManageSubscription();
+          }}
+          onCancel={() => setCancelDialogOpen(false)}
+        />
+      )}
+
+      {downgradeDialogOpen && (
+        <ConfirmDialog
+          title="Change Plan?"
+          message="To change your plan, you'll be taken to Google Play."
+          confirmLabel="Go to Google Play"
+          onConfirm={async () => {
+            setDowngradeDialogOpen(false);
+            await openManageSubscription();
+          }}
+          onCancel={() => setDowngradeDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }
