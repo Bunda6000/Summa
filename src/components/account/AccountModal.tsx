@@ -6,6 +6,9 @@ import useSubscriptionStore from '../../subscription/useSubscriptionStore';
 import ConfirmDialog from './ConfirmDialog';
 import { LEGAL_URLS } from '../../constants';
 import styles from './AccountModal.module.css';
+import { detectLegacyData } from '../../migration/migrateLocalData';
+import MigrationPanel from '../migration/MigrationPanel';
+import type { AppData } from '../../types';
 
 interface Props {
   onClose: () => void;
@@ -16,7 +19,6 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const { session, resendVerification, deleteAccount, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
-  const { rawStatus, currentPeriodEnd } = useSubscriptionStore();
 
   const [displayName, setDisplayName] = useState('');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -61,18 +63,6 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
       : profile?.subscription_status === 'cancelled'
       ? 'Cancelled'
       : 'Past Due';
-
-  const isPaidPlan = profile?.plan === 'paid';
-  const isActiveSubscription = profile?.subscription_status === 'active';
-  const isPendingCancellation = isPaidPlan && rawStatus === 'canceled';
-
-  const expiryDateStr = currentPeriodEnd
-    ? new Date(currentPeriodEnd).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : null;
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Account">
@@ -135,6 +125,36 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               />
             </div>
 
+            {migrateLegacy && !showMigrationPanel && (
+              <section style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Offline Data</h3>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+                  You have local data that hasn't been imported yet.
+                </p>
+                <button
+                  onClick={() => setShowMigrationPanel(true)}
+                  style={{ fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Migrate offline data →
+                </button>
+              </section>
+            )}
+            {migrateLegacy && showMigrationPanel && (
+              <section style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <MigrationPanel
+                  userId={userId}
+                  legacyData={migrateLegacy}
+                  onComplete={async () => {
+                    setMigrateLegacy(null);
+                    setShowMigrationPanel(false);
+                    useBudgetStore.getState().resetStore();
+                    if (userId) await useBudgetStore.getState().initStore(userId);
+                  }}
+                  onSkip={() => setShowMigrationPanel(false)}
+                />
+              </section>
+            )}
+
             {/* Plan */}
             <div className={styles.field}>
               <span className={styles.label}>Plan</span>
@@ -148,13 +168,6 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               <span className={styles.label}>Subscription status</span>
               <span className={styles.value}>{statusLabel}</span>
             </div>
-
-            {/* Pending cancellation notice */}
-            {isPendingCancellation && expiryDateStr && (
-              <div className={styles.field}>
-                <p className={styles.hint}>Access ends on {expiryDateStr}.</p>
-              </div>
-            )}
 
             {/* Upgrade — guarded by email verification and billing state */}
             {profile?.plan === 'free' && (
@@ -174,37 +187,13 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
             )}
 
             {/* Manage Subscription — only shown for paid users */}
-            {isPaidPlan && (
+            {profile?.plan === 'paid' && (
               <div className={styles.field}>
                 <button
                   className={styles.manageSubBtn}
                   onClick={handleManageSubscription}
                 >
                   Manage Subscription
-                </button>
-              </div>
-            )}
-
-            {/* Change plan / downgrade via Google Play — only shown for paid users */}
-            {isPaidPlan && (
-              <div className={styles.field}>
-                <button
-                  className={styles.manageSubBtn}
-                  onClick={() => setDowngradeDialogOpen(true)}
-                >
-                  Change plan in Google Play
-                </button>
-              </div>
-            )}
-
-            {/* Cancel Subscription — only for active paid subscribers without pending cancellation */}
-            {isPaidPlan && isActiveSubscription && !isPendingCancellation && (
-              <div className={styles.field}>
-                <button
-                  className={styles.manageSubBtn}
-                  onClick={() => setCancelDialogOpen(true)}
-                >
-                  Cancel Subscription
                 </button>
               </div>
             )}
