@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import useSubscriptionStore from '../subscription/useSubscriptionStore';
 import { shouldSync } from './syncHelpers';
 import type { AppData } from '../types';
+import { logEvent } from '../monitoring/logger';
 
 const DEBOUNCE_MS = 2000;
 const RETRY_DELAYS_MS = [1000, 2000, 4000];
@@ -46,6 +47,12 @@ async function performSync(payload: PendingPayload, attempt = 0): Promise<void> 
     _retryTimer = setTimeout(() => performSync(payload, attempt + 1), RETRY_DELAYS_MS[attempt]);
   } else {
     _retryCount = 0;
+    logEvent({
+      event_type: 'sync_failure',
+      severity: 'error',
+      message: 'Cloud sync failed after all retries',
+      metadata: { error: error.message ?? 'Sync failed', userId: payload.userId },
+    });
     useSyncStore.setState({ syncStatus: 'error', syncError: error.message ?? 'Sync failed' });
   }
 }

@@ -7,8 +7,18 @@ import useAuthStore from './auth/useAuthStore';
 import useSubscriptionStore from './subscription/useSubscriptionStore';
 import AuthScreen from './components/auth/AuthScreen';
 import MigrationScreen from './components/migration/MigrationScreen';
+import MonitoringPage from './components/monitoring/MonitoringPage';
 import { detectLegacyData } from './migration/migrateLocalData';
 import type { AppData } from './types';
+
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS ?? '')
+  .split(',')
+  .map((e: string) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdmin(email: string | undefined): boolean {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
 
 useBudgetStore.subscribe(
   (state) => state.dark,
@@ -72,7 +82,23 @@ function Root() {
     setLegacyData(null);
   };
 
+  const isMonitoringRoute = typeof window !== 'undefined' && window.location.pathname === '/monitoring';
+
   if (!authReady) return null;
+
+  // /monitoring is admin-only; show 404 for non-admins or unauthenticated users
+  if (isMonitoringRoute) {
+    if (!session || !isAdmin(session.user.email)) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--muted)', fontFamily: 'sans-serif', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontSize: 48, fontWeight: 700 }}>404</span>
+          <span style={{ fontSize: 14 }}>Page not found</span>
+        </div>
+      );
+    }
+    return <MonitoringPage />;
+  }
+
   if (!session) return <AuthScreen />;
   if (migrationPending && legacyData) {
     return (

@@ -16,7 +16,7 @@ vi.mock('../../lib/supabase', () => ({
       })),
     },
     functions: {
-      invoke: vi.fn(),
+      invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
   },
 }));
