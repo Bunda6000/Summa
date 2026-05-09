@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { animatePixelsFromPoint, getLastButtonRect, prefersReducedMotion, isMobile } from "../../lib/pixelAnimation";
 import useProfileStore from "../../profile/useProfileStore";
 import useAuthStore from "../../auth/useAuthStore";
 import useSubscriptionStore from "../../subscription/useSubscriptionStore";
@@ -38,6 +39,32 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export default function BillingModal({ onClose }: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const triggerRect = getLastButtonRect();
+    if (!triggerRect || prefersReducedMotion() || isMobile()) return;
+    const rafId = requestAnimationFrame(() => {
+      if (!cardRef.current) return;
+      const card = cardRef.current;
+      const rect = card.getBoundingClientRect();
+      card.style.opacity = '0';
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9997;';
+      document.body.appendChild(container);
+      const cx = triggerRect.left + triggerRect.width / 2;
+      const cy = triggerRect.top + triggerRect.height / 2;
+      animatePixelsFromPoint(cx, cy, rect, container).then(() => {
+        document.body.removeChild(container);
+        if (cardRef.current) {
+          cardRef.current.style.transition = 'opacity 0.1s';
+          cardRef.current.style.opacity = '1';
+        }
+      });
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
   const { session } = useAuthStore();
   const { profile } = useProfileStore();
   const { rawStatus, currentPeriodEnd } = useSubscriptionStore();
@@ -63,7 +90,7 @@ export default function BillingModal({ onClose }: Props) {
       aria-modal="true"
       aria-label="Billing"
     >
-      <div className={styles.card}>
+      <div ref={cardRef} className={styles.card}>
         {/* Header */}
         <div className={styles.header}>
           <h2 className={styles.title}>Billing &amp; Receipts</h2>
