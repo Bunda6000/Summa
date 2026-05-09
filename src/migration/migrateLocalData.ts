@@ -17,7 +17,10 @@ export async function runMigration(userId: string, legacyData: AppData): Promise
 
   const localTs = legacyData._updatedAt ?? 0;
   const cloudTs = cloudRow?.updated_at ? Date.parse(cloudRow.updated_at) : 0;
-  const winner: AppData = localTs >= cloudTs ? legacyData : (cloudRow!.data as AppData);
+  const winner: AppData =
+    cloudRow === null || localTs >= cloudTs
+      ? legacyData
+      : (cloudRow.data as AppData);
 
   const { error } = await supabase.from('user_data').upsert({ user_id: userId, data: winner });
   if (error) throw new Error(error.message);
