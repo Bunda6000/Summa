@@ -1,4 +1,5 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, type ChangeEvent } from 'react';
+import { animatePixelsFromPoint, getLastButtonRect, prefersReducedMotion, isMobile } from '../../lib/pixelAnimation';
 import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
@@ -17,6 +18,32 @@ interface Props {
 }
 
 export default function AccountModal({ onClose, onOpenBilling }: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const triggerRect = getLastButtonRect();
+    if (!triggerRect || prefersReducedMotion() || isMobile()) return;
+    const rafId = requestAnimationFrame(() => {
+      if (!cardRef.current) return;
+      const card = cardRef.current;
+      const rect = card.getBoundingClientRect();
+      card.style.opacity = '0';
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9997;';
+      document.body.appendChild(container);
+      const cx = triggerRect.left + triggerRect.width / 2;
+      const cy = triggerRect.top + triggerRect.height / 2;
+      animatePixelsFromPoint(cx, cy, rect, container).then(() => {
+        document.body.removeChild(container);
+        if (cardRef.current) {
+          cardRef.current.style.transition = 'opacity 0.1s';
+          cardRef.current.style.opacity = '1';
+        }
+      });
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
   const { session, signOut, resendVerification, deleteAccount, updateEmail, clearEmailStatus, loading: authLoading, error: authError, info: authInfo, emailSuccess, emailError } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
@@ -86,7 +113,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Account">
-      <div className={styles.card}>
+      <div ref={cardRef} className={styles.card}>
         <div className={styles.header}>
           <h2 className={styles.title}>Account</h2>
           <button

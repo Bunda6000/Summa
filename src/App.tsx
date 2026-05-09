@@ -24,6 +24,7 @@ import FixedIncomeModal from './components/modals/FixedIncomeModal';
 import VarIncomeModal from './components/modals/VarIncomeModal';
 import LockedFeature from './components/subscription/LockedFeature';
 import GracePeriodBanner from './components/billing/GracePeriodBanner';
+import PixelModalOverlay from './components/PixelModalOverlay';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -794,8 +795,11 @@ export default function BudgetApp() {
 
       {/* ═══ MODALS ═══ */}
       {modal && (
-        <div onClick={()=>setModal(null)} className={`overlay-mobile ${styles.overlay}`}>
-          <div onClick={e=>e.stopPropagation()} className="modal-mobile" style={{animation:"slideUp .25s"}}>
+        <PixelModalOverlay
+          onClose={() => setModal(null)}
+          overlayClass={`overlay-mobile ${styles.overlay}`}
+          innerClass="modal-mobile"
+        >
             {modal.type==="editExp" && (
               <ExpenseModal catObj={modal.catObj} monthKey={modal.monthKey} monthLabel={modal.monthLabel}
                 entry={modal.entry} catMaxYear={getCY()+(modal.catObj.maxYears||5)}
@@ -861,8 +865,7 @@ export default function BudgetApp() {
                   flash("Saved!");setModal(null);
                 }} onClose={()=>setModal(null)} />
             )}
-          </div>
-        </div>
+        </PixelModalOverlay>
       )}
       {/* Mobile thumb-zone action bar — only shown on small screens for tabs with add actions */}
       {(tab === "incomes" || tab === "expenses") && (

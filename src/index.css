@@ -3,6 +3,7 @@ html, body {
   overflow-x: hidden;
 }
 :root, [data-theme="light"] {
+  --pixel-color:#1A9E76; --pixel-glow:rgba(26,158,118,0.55);
   --bg:#F2F0EC; --card:rgba(255,255,255,0.72); --card-solid:#FFFFFF; --card-alt:rgba(248,246,243,0.8); --card-hover:rgba(240,238,234,0.9);
   --border:rgba(0,0,0,0.07); --border-light:rgba(0,0,0,0.035); --border-input:rgba(0,0,0,0.13);
   --text:#111114; --text2:#45454A; --muted:#77777E; --faint:#C4C4CA; --faintest:#9A9AA0;
@@ -19,6 +20,7 @@ html, body {
   --safe-right: env(safe-area-inset-right, 0px);
 }
 [data-theme="dark"] {
+  --pixel-color:#68C0A4; --pixel-glow:rgba(104,192,164,0.55);
   --bg:#111827; --card:rgba(28,33,52,0.78); --card-solid:#1C2134; --card-alt:rgba(32,38,60,0.82); --card-hover:rgba(38,46,70,0.88);
   --border:rgba(255,255,255,0.09); --border-light:rgba(255,255,255,0.04); --border-input:rgba(255,255,255,0.13);
   --text:#E8E6E3; --text2:#A0A0A8; --muted:#6A6A72; --faint:#3A3A42; --faintest:#55555E;
