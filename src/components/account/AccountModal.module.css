@@ -255,6 +255,25 @@
   background: var(--accent-bg);
 }
 
+.logoutBtn {
+  padding: 10px 0;
+  background: transparent;
+  color: var(--text2);
+  border: 1.5px solid var(--border-input);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  width: 100%;
+}
+
+.logoutBtn:hover {
+  background: var(--chip);
+  color: var(--text);
+}
+
 .dangerZone {
   border-top: 1px solid color-mix(in srgb, var(--red) 20%, transparent);
   padding-top: 16px;

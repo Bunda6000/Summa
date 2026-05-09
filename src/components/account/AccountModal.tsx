@@ -3,6 +3,7 @@ import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
 import useSubscriptionStore from '../../subscription/useSubscriptionStore';
+import useBudgetStore from '../../store/useBudgetStore';
 import ConfirmDialog from './ConfirmDialog';
 import { LEGAL_URLS } from '../../constants';
 import styles from './AccountModal.module.css';
@@ -16,11 +17,13 @@ interface Props {
 }
 
 export default function AccountModal({ onClose, onOpenBilling }: Props) {
-  const { session, resendVerification, deleteAccount, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
+  const { session, signOut, resendVerification, deleteAccount, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
 
   const [displayName, setDisplayName] = useState('');
+  const [migrateLegacy, setMigrateLegacy] = useState<AppData | null>(null);
+  const [showMigrationPanel, setShowMigrationPanel] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -32,6 +35,10 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   useEffect(() => {
     if (userId) loadProfile(userId);
   }, [userId, loadProfile]);
+
+  useEffect(() => {
+    detectLegacyData().then(data => setMigrateLegacy(data));
+  }, []);
 
   useEffect(() => {
     if (profile?.display_name) setDisplayName(profile.display_name);
@@ -223,6 +230,14 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               disabled={saving}
             >
               {saving ? 'Saving…' : 'Save'}
+            </button>
+
+            {/* Logout */}
+            <button
+              className={styles.logoutBtn}
+              onClick={signOut}
+            >
+              Log Out
             </button>
 
             {/* Delete account — danger zone */}
