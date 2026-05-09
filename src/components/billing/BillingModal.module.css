@@ -154,13 +154,6 @@
   border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
 }
 
-/* ── Grace period date (amber to draw attention) ── */
-
-.gracePeriodDate {
-  color: var(--amber, #f59e0b);
-  font-weight: 600;
-}
-
 /* ── Receipts list ── */
 
 .receiptList {
