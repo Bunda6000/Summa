@@ -128,6 +128,7 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
         loaded._schemaVersion = 2;
       }
 
+      loaded._updatedAt = loaded._updatedAt ?? Date.now();   // preserve existing timestamp, or stamp fresh
       saveStore(localKey, loaded);
       set({ appData: loaded, dark: storedDark, initialized: true, _initializing: false });
       document.documentElement.dataset.theme = storedDark ? 'dark' : 'light';
@@ -146,10 +147,11 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
   // ── Persistence helper ──
   _save: (nextData: AppData) => {
     const { userId } = get();
-    set({ appData: nextData });
+    const stamped = { ...nextData, _updatedAt: Date.now() };
+    set({ appData: stamped });
     if (userId) {
-      saveStore(`budget-app-v2-${userId}`, nextData);
-      scheduleCloudSync(userId, nextData);
+      saveStore(`budget-app-v2-${userId}`, stamped);
+      scheduleCloudSync(userId, stamped);
     }
   },
 

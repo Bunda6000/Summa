@@ -40,8 +40,7 @@ interface Props {
 export default function BillingModal({ onClose }: Props) {
   const { session } = useAuthStore();
   const { profile } = useProfileStore();
-  const { rawStatus, currentPeriodEnd, gracePeriodEnd } =
-    useSubscriptionStore();
+  const { rawStatus, currentPeriodEnd } = useSubscriptionStore();
   const { records, loading, error, loadReceipts, openPlayReceipt, retry } =
     useReceiptsStore();
 
@@ -125,15 +124,6 @@ export default function BillingModal({ onClose }: Props) {
               <div className={styles.field}>
                 <span className={styles.label}>Renewal date</span>
                 <span className={styles.value}>{fmtDate(renewalDate)}</span>
-              </div>
-            )}
-
-            {rawStatus === "grace_period" && gracePeriodEnd && (
-              <div className={styles.field}>
-                <span className={styles.label}>Grace period ends</span>
-                <span className={`${styles.value} ${styles.gracePeriodDate}`}>
-                  {fmtDate(gracePeriodEnd)}
-                </span>
               </div>
             )}
           </section>
