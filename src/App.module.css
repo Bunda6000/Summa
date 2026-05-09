@@ -1,16 +1,19 @@
 .root {
   background: var(--bg);
   background-image: radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 60%);
-  min-height: 100vh;
+  min-height: 100dvh;
   font-family: 'DM Sans', sans-serif;
   color: var(--text);
   -webkit-text-size-adjust: 100%;
   position: relative;
+  max-width: 100%;
+  overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 .loadWrap {
   background: var(--bg);
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,6 +36,7 @@
   transition: box-shadow 0.3s;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  padding-top: env(safe-area-inset-top);
 }
 
 .headerInner {
@@ -83,7 +87,7 @@
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
   transition: all 0.25s;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .tabActive {
@@ -94,7 +98,8 @@
 
 .main {
   margin: 0 auto;
-  padding: 28px 28px 60px;
+  padding: 28px 28px calc(60px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
 }
 
 .catSidebar {
