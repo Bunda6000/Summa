@@ -128,6 +128,7 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
         loaded._schemaVersion = 2;
       }
 
+      loaded._updatedAt = loaded._updatedAt ?? Date.now();   // preserve existing timestamp, or stamp fresh
       saveStore(localKey, loaded);
       set({ appData: loaded, dark: storedDark, initialized: true, _initializing: false });
       document.documentElement.dataset.theme = storedDark ? 'dark' : 'light';
