@@ -22,6 +22,7 @@ import CategoryFormModal from './components/modals/CategoryFormModal';
 import FixedIncomeModal from './components/modals/FixedIncomeModal';
 import VarIncomeModal from './components/modals/VarIncomeModal';
 import LockedFeature from './components/subscription/LockedFeature';
+import GracePeriodBanner from './components/billing/GracePeriodBanner';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -178,6 +179,8 @@ export default function BudgetApp() {
           </div>
         </div>
       </header>
+
+      <GracePeriodBanner />
 
       <main className={`main-area ${styles.main}`}>
 
