@@ -126,3 +126,17 @@
   text-decoration-style: dashed;
   text-underline-offset: 3px;
 }
+
+.legalText {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.legalLink {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

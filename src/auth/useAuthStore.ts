@@ -44,6 +44,7 @@ interface AuthState {
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   resendVerification: (email: string) => Promise<void>;
   clearError: () => void;
   clearVerificationError: () => void;
@@ -161,6 +162,28 @@ const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true });
     await supabase.auth.signOut();
     set({ session: null, loading: false, error: null, failedAttempts: 0, lockedUntil: null });
+  },
+
+  deleteAccount: async () => {
+    const { session } = get();
+    if (!session) return;
+
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase.functions.invoke('delete-account', {
+        body: { userId: session.user.id },
+      });
+
+      if (error) {
+        set({ loading: false, error: error.message });
+        return;
+      }
+
+      await supabase.auth.signOut();
+      set({ session: null, loading: false, error: null, failedAttempts: 0, lockedUntil: null });
+    } catch {
+      set({ loading: false, error: 'Failed to delete account. Please try again.' });
+    }
   },
 
   resendVerification: async (email) => {

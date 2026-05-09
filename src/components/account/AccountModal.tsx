@@ -4,6 +4,7 @@ import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
 import useSubscriptionStore from '../../subscription/useSubscriptionStore';
 import ConfirmDialog from './ConfirmDialog';
+import { LEGAL_URLS } from '../../constants';
 import styles from './AccountModal.module.css';
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 }
 
 export default function AccountModal({ onClose, onOpenBilling }: Props) {
-  const { session, resendVerification, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
+  const { session, resendVerification, deleteAccount, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
   const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
   const { rawStatus, currentPeriodEnd } = useSubscriptionStore();
@@ -20,6 +21,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const [displayName, setDisplayName] = useState('');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const userId = session?.user.id ?? '';
   const email = session?.user.email ?? '';
@@ -233,6 +235,37 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
+
+            {/* Delete account — danger zone */}
+            <div className={styles.dangerZone}>
+              <button
+                className={styles.deleteBtn}
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete Account
+              </button>
+            </div>
+
+            {/* Legal links */}
+            <p className={styles.legalText}>
+              <a
+                href={LEGAL_URLS.privacy}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.legalLink}
+              >
+                Privacy Policy
+              </a>
+              {' · '}
+              <a
+                href={LEGAL_URLS.terms}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.legalLink}
+              >
+                Terms of Service
+              </a>
+            </p>
           </>
         )}
       </div>
@@ -242,6 +275,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
           title="Cancel Subscription?"
           message="Your subscription will remain active until the end of the billing period. To cancel, you'll be taken to Google Play."
           confirmLabel="Go to Google Play"
+          cancelLabel="Keep Subscription"
           onConfirm={async () => {
             setCancelDialogOpen(false);
             await openManageSubscription();
@@ -255,11 +289,26 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
           title="Change Plan?"
           message="To change your plan, you'll be taken to Google Play."
           confirmLabel="Go to Google Play"
+          cancelLabel="Keep Plan"
           onConfirm={async () => {
             setDowngradeDialogOpen(false);
             await openManageSubscription();
           }}
           onCancel={() => setDowngradeDialogOpen(false)}
+        />
+      )}
+
+      {deleteDialogOpen && (
+        <ConfirmDialog
+          title="Delete Account?"
+          message="This will permanently delete your account and all your data. This action cannot be undone."
+          confirmLabel="Delete Forever"
+          onConfirm={async () => {
+            setDeleteDialogOpen(false);
+            await deleteAccount();
+            if (!useAuthStore.getState().error) onClose();
+          }}
+          onCancel={() => setDeleteDialogOpen(false)}
         />
       )}
     </div>

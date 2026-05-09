@@ -4,11 +4,12 @@ interface Props {
   title: string;
   message: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm', onConfirm, onCancel }: Props) {
+export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onCancel }: Props) {
   return (
     <div className={styles.overlay} onClick={onCancel} aria-label="Confirm action overlay">
       <div
@@ -22,7 +23,7 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm'
         <p className={styles.message}>{message}</p>
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onCancel}>
-            Keep Subscription
+            {cancelLabel}
           </button>
           <button className={styles.confirmBtn} onClick={onConfirm}>
             {confirmLabel}

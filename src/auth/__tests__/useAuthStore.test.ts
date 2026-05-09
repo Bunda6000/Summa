@@ -15,6 +15,9 @@ vi.mock('../../lib/supabase', () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
     },
+    functions: {
+      invoke: vi.fn(),
+    },
   },
 }));
 
@@ -287,6 +290,69 @@ describe('useAuthStore.initAuth — reset error detection', () => {
     expect(useAuthStore.getState().verificationError).toMatch(/expired/i);
     expect(useAuthStore.getState().resetError).toBeNull();
     vi.unstubAllGlobals();
+  });
+});
+
+const mockFunctionsInvoke = vi.mocked(supabase.functions.invoke);
+
+describe('useAuthStore.deleteAccount', () => {
+  beforeEach(() => {
+    mockFunctionsInvoke.mockReset();
+    mockSignOut.mockReset();
+  });
+
+  it('invokes the delete-account edge function with the user id', async () => {
+    mockFunctionsInvoke.mockResolvedValue({ data: { success: true }, error: null } as never);
+    mockSignOut.mockResolvedValue({ error: null } as never);
+
+    useAuthStore.setState({ session: { user: { id: 'user-123' } } as never });
+    await useAuthStore.getState().deleteAccount();
+
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith('delete-account', {
+      body: { userId: 'user-123' },
+    });
+  });
+
+  it('signs out after successful account deletion', async () => {
+    mockFunctionsInvoke.mockResolvedValue({ data: { success: true }, error: null } as never);
+    mockSignOut.mockResolvedValue({ error: null } as never);
+
+    useAuthStore.setState({ session: { user: { id: 'user-123' } } as never });
+    await useAuthStore.getState().deleteAccount();
+
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(useAuthStore.getState().session).toBeNull();
+  });
+
+  it('sets error and does not sign out when the edge function returns an error', async () => {
+    mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: 'Deletion failed' } } as never);
+    const fakeSession = { user: { id: 'user-123' } } as never;
+    useAuthStore.setState({ session: fakeSession });
+
+    await useAuthStore.getState().deleteAccount();
+
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().error).toMatch(/deletion failed/i);
+    expect(useAuthStore.getState().session).toEqual(fakeSession);
+  });
+
+  it('does nothing when there is no active session', async () => {
+    useAuthStore.setState({ session: null });
+    await useAuthStore.getState().deleteAccount();
+    expect(mockFunctionsInvoke).not.toHaveBeenCalled();
+  });
+
+  it('sets error and resets loading when the edge function throws a network error', async () => {
+    mockFunctionsInvoke.mockRejectedValue(new Error('Network failure'));
+    const fakeSession = { user: { id: 'user-123' } } as never;
+    useAuthStore.setState({ session: fakeSession });
+
+    await useAuthStore.getState().deleteAccount();
+
+    expect(useAuthStore.getState().loading).toBe(false);
+    expect(useAuthStore.getState().error).toMatch(/failed to delete account/i);
+    expect(useAuthStore.getState().session).toEqual(fakeSession);
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 });
 
