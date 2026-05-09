@@ -43,7 +43,7 @@ test.describe('Local data migration', () => {
     await page.goto('/');
     await page.evaluate(() => {
       localStorage.setItem('budget-app-v2', JSON.stringify({
-        categories: [], expenses: {}, loanTypes: [], loanPaid: {}, fixedIncomes: [], variableIncomes: [],
+        categories: [], expenses: {}, loanTypes: [], loanPaid: {}, fixedIncomes: [], variableIncomes: [], _schemaVersion: 2,
       }));
     });
     await page.fill('[aria-label="Email"]', process.env.TEST_EMAIL!);
