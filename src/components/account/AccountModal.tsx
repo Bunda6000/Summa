@@ -3,6 +3,9 @@ import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
 import useBillingStore from '../../store/useBillingStore';
 import styles from './AccountModal.module.css';
+import { detectLegacyData } from '../../migration/migrateLocalData';
+import MigrationPanel from '../migration/MigrationPanel';
+import type { AppData } from '../../types';
 
 interface Props {
   onClose: () => void;
@@ -15,6 +18,12 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const { status: billingStatus, error: billingError, purchase, openManageSubscription, clearError } = useBillingStore();
 
   const [displayName, setDisplayName] = useState('');
+  const [migrateLegacy, setMigrateLegacy] = useState<AppData | null>(null);
+  const [showMigrationPanel, setShowMigrationPanel] = useState(false);
+
+  useEffect(() => {
+    detectLegacyData().then(setMigrateLegacy);
+  }, []);
 
   const userId = session?.user.id ?? '';
   const email = session?.user.email ?? '';
@@ -115,6 +124,31 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                 disabled={saving}
               />
             </div>
+
+            {migrateLegacy && !showMigrationPanel && (
+              <section style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Offline Data</h3>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+                  You have local data that hasn't been imported yet.
+                </p>
+                <button
+                  onClick={() => setShowMigrationPanel(true)}
+                  style={{ fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Migrate offline data →
+                </button>
+              </section>
+            )}
+            {migrateLegacy && showMigrationPanel && (
+              <section style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <MigrationPanel
+                  userId={userId}
+                  legacyData={migrateLegacy}
+                  onComplete={() => { setMigrateLegacy(null); setShowMigrationPanel(false); }}
+                  onSkip={() => setShowMigrationPanel(false)}
+                />
+              </section>
+            )}
 
             {/* Plan */}
             <div className={styles.field}>
