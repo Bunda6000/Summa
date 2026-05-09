@@ -5,12 +5,13 @@ export type SubscriptionTier = 'free' | 'active' | 'grace_period' | 'expired' | 
 
 export type FeatureTier = 'free' | 'paid';
 
-export type FeatureKey = 'budget_view' | 'loans_view' | 'dashboard_overview';
+export type FeatureKey = 'budget_view' | 'loans_view' | 'dashboard_overview' | 'cloud_sync';
 
 export const FEATURE_FLAGS: Record<FeatureKey, FeatureTier> = {
   dashboard_overview: 'free',
   budget_view: 'paid',
   loans_view: 'paid',
+  cloud_sync: 'paid',
 };
 
 /**

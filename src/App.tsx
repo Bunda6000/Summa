@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SyncStatusIndicator from './components/SyncStatusIndicator';
 import { mk, parseMk, today, fmtDate, getCY, getCM, MIN_YEAR, MONTHS } from './utils/dates';
 import { fmt } from './utils/formatters';
 import { reorder } from './utils/expressions';
@@ -810,6 +811,7 @@ export default function BudgetApp() {
           </div>
         </div>
       )}
+      <SyncStatusIndicator />
     </div>
   );
 }
