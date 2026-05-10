@@ -59,12 +59,27 @@ describe("computeAccessTier — grace_period rawStatus", () => {
   });
 });
 
+describe("computeAccessTier — trial rawStatus", () => {
+  it("returns trial when status is trial and trialEndsAt is in the future", () => {
+    expect(computeAccessTier("trial", null, null, FUTURE)).toBe("trial");
+  });
+
+  it("returns expired when status is trial and trialEndsAt has passed", () => {
+    expect(computeAccessTier("trial", null, null, PAST)).toBe("expired");
+  });
+
+  it("returns expired when status is trial and trialEndsAt is null", () => {
+    expect(computeAccessTier("trial", null, null, null)).toBe("expired");
+  });
+});
+
 describe("isFeatureAllowed", () => {
   describe("free tier features", () => {
     it("is always allowed regardless of subscription", () => {
       expect(isFeatureAllowed("free", "dashboard_overview")).toBe(true);
       expect(isFeatureAllowed("expired", "dashboard_overview")).toBe(true);
       expect(isFeatureAllowed("canceled", "dashboard_overview")).toBe(true);
+      expect(isFeatureAllowed("trial", "dashboard_overview")).toBe(true);
     });
   });
 
@@ -82,6 +97,11 @@ describe("isFeatureAllowed", () => {
     it("is allowed during grace period", () => {
       expect(isFeatureAllowed("grace_period", "budget_view")).toBe(true);
       expect(isFeatureAllowed("grace_period", "loans_view")).toBe(true);
+    });
+
+    it("is allowed during active trial", () => {
+      expect(isFeatureAllowed("trial", "budget_view")).toBe(true);
+      expect(isFeatureAllowed("trial", "loans_view")).toBe(true);
     });
 
     it("is denied when subscription expired", () => {

@@ -41,6 +41,7 @@ interface RtdnUpdate {
   subscriptionStatus: "active" | "canceled" | "expired" | "grace_period" | null;
   profilePlan: "paid" | "free" | null;
   profileSubscriptionStatus: "active" | "cancelled" | "past_due" | null;
+  clearTrialColumns: boolean;
 }
 
 function getSubscriptionUpdate(notificationType: number): RtdnUpdate {
@@ -51,10 +52,12 @@ function getSubscriptionUpdate(notificationType: number): RtdnUpdate {
     case NT.SUBSCRIPTION_PURCHASED:
     case NT.SUBSCRIPTION_PRICE_CHANGE_CONFIRMED:
     case NT.SUBSCRIPTION_DEFERRED:
+      // Covers trial → paid conversion (RENEWED fires when trial converts).
       return {
         subscriptionStatus: "active",
         profilePlan: "paid",
         profileSubscriptionStatus: "active",
+        clearTrialColumns: true,
       };
 
     case NT.SUBSCRIPTION_CANCELED:
@@ -63,6 +66,7 @@ function getSubscriptionUpdate(notificationType: number): RtdnUpdate {
         subscriptionStatus: "canceled",
         profilePlan: null,
         profileSubscriptionStatus: "cancelled",
+        clearTrialColumns: false,
       };
 
     case NT.SUBSCRIPTION_ON_HOLD:
@@ -72,6 +76,7 @@ function getSubscriptionUpdate(notificationType: number): RtdnUpdate {
         subscriptionStatus: "grace_period",
         profilePlan: null,
         profileSubscriptionStatus: "past_due",
+        clearTrialColumns: false,
       };
 
     case NT.SUBSCRIPTION_IN_GRACE_PERIOD:
@@ -79,14 +84,17 @@ function getSubscriptionUpdate(notificationType: number): RtdnUpdate {
         subscriptionStatus: "grace_period",
         profilePlan: "paid",
         profileSubscriptionStatus: "past_due",
+        clearTrialColumns: false,
       };
 
     case NT.SUBSCRIPTION_REVOKED:
     case NT.SUBSCRIPTION_EXPIRED:
+      // Covers trial expiry without payment (Google Play sends EXPIRED).
       return {
         subscriptionStatus: "expired",
         profilePlan: "free",
         profileSubscriptionStatus: "active",
+        clearTrialColumns: true,
       };
 
     default:
@@ -94,6 +102,7 @@ function getSubscriptionUpdate(notificationType: number): RtdnUpdate {
         subscriptionStatus: null,
         profilePlan: null,
         profileSubscriptionStatus: null,
+        clearTrialColumns: false,
       };
   }
 }
@@ -346,6 +355,12 @@ Deno.serve(async (req: Request) => {
       notificationType === NT.SUBSCRIPTION_REVOKED;
     if (shouldClearGrace) {
       subUpdate.grace_period_end = null;
+    }
+
+    // Clear trial columns when the trial converts to paid or expires.
+    if (update.clearTrialColumns) {
+      subUpdate.trial_started_at = null;
+      subUpdate.trial_ends_at = null;
     }
 
     const { error: subErr } = await adminClient
