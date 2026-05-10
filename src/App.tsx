@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SyncStatusIndicator from './components/SyncStatusIndicator';
 import { mk, parseMk, today, fmtDate, getCY, getCM, MIN_YEAR, MONTHS } from './utils/dates';
 import { fmt } from './utils/formatters';
 import { reorder } from './utils/expressions';
@@ -20,6 +21,10 @@ import ExpenseModal from './components/modals/ExpenseModal';
 import CategoryFormModal from './components/modals/CategoryFormModal';
 import FixedIncomeModal from './components/modals/FixedIncomeModal';
 import VarIncomeModal from './components/modals/VarIncomeModal';
+import LockedFeature from './components/subscription/LockedFeature';
+import GracePeriodBanner from './components/billing/GracePeriodBanner';
+import TrialBanner from './components/billing/TrialBanner';
+import PixelModalOverlay from './components/PixelModalOverlay';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -114,7 +119,7 @@ export default function BudgetApp() {
   const { categories = [], expenses = {}, fixedIncomes = [], variableIncomes = [], loanTypes = [], loanPaid = {} } = appData || {};
 
   if (!introDone) return (
-    <div style={{background:'#0A0A10',minHeight:'100vh',position:'relative',overflow:'hidden'}}>
+    <div style={{background:'#0A0A10',minHeight:'100dvh',position:'relative',overflow:'hidden'}}>
       <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
       <IntroSequence onComplete={() => setIntroDone(true)} />
     </div>
@@ -142,20 +147,25 @@ export default function BudgetApp() {
       {/* HEADER */}
       <header className={styles.header} style={{boxShadow:"var(--header-shadow)"}}>
         <div className={`header-inner ${styles.headerInner}`}>
-          <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+          {/* Logo — row 1 col 1 on mobile */}
+          <div className={styles.headerLogo}>
             <h1 className={styles.logo}>Summa</h1>
             <span className={styles.logoSub}>personal finance, clearly</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <nav className={styles.tabs}>
-              {([ ["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"] ] as [string,string][]).map(([k,label])=>(
-                <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} className={`${styles.tab} ${tab===k ? styles.tabActive : ''}`}>
-                  {label}
-                </button>
-              ))}
-            </nav>
+
+          {/* Nav tabs — row 2 on mobile (full-width), inline on desktop */}
+          <nav className={styles.tabs}>
+            {([ ["dashboard","Overview"],["expenses","Expenses"],["incomes","Incomes"],["budget","Budget"] ] as [string,string][]).map(([k,label])=>(
+              <button key={k} onClick={()=>setTab(k as "dashboard"|"expenses"|"incomes"|"budget")} className={`tab-btn ${styles.tab} ${tab===k ? styles.tabActive : ''}`} style={{touchAction:"manipulation"}}>
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Utility buttons — row 1 col 2 on mobile */}
+          <div className={styles.headerUtils}>
             <button onClick={toggleDark} title={dark?"Light mode":"Dark mode"}
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 12px",cursor:"pointer",fontSize:18,lineHeight:1,transition:"all .35s cubic-bezier(.22,1,.36,1)",minWidth:42,minHeight:42,display:"flex",alignItems:"center",justifyContent:"center",transform:dark?"rotate(180deg)":"rotate(0deg)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 12px",cursor:"pointer",fontSize:18,lineHeight:1,transition:"all .35s cubic-bezier(.22,1,.36,1)",minWidth:44,minHeight:44,display:"flex",alignItems:"center",justifyContent:"center",transform:dark?"rotate(180deg)":"rotate(0deg)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
               {dark ? "☀" : "☾"}
             </button>
             <button onClick={() => setShowAccount(true)} title="Account"
@@ -169,6 +179,9 @@ export default function BudgetApp() {
           </div>
         </div>
       </header>
+
+      <TrialBanner userId={userId} />
+      <GracePeriodBanner />
 
       <main className={`main-area ${styles.main}`}>
 
@@ -275,8 +288,8 @@ export default function BudgetApp() {
                   <BarChart data={miniData} barGap={2}>
                     <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"} />
-                    <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#6A6A72":"#9A9AA0"}} axisLine={false} tickLine={false} />
-                    <YAxis tick={{fontSize:11,fill:dark?"#6A6A72":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
+                    <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} />
+                    <YAxis tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
                     <Tooltip formatter={(v: number)=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
                     <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
                     <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
@@ -369,20 +382,22 @@ export default function BudgetApp() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => setModal({type:"addCat"})} className={`btn-hover ${styles.btnGhost}`} style={{width:"100%",marginTop:8,fontSize:11,padding:"6px 10px"}}>+ Add Category</button>
+              <button onClick={() => setModal({type:"addCat"})} className={`btn-hover ${styles.btnGhost} ${styles.hideOnMobile}`} style={{width:"100%",marginTop:8,fontSize:11,padding:"6px 10px"}}>+ Add Category</button>
             </div>
 
             {/* Right content */}
             <div style={{flex:1,minWidth:0}}>
               {cat && cat.id === "loans" ? (
-                <LoansView
-                  loanTypes={loanTypes}
-                  getLoanAmountForMonth={getLoanAmountForMonth}
-                  expYear={expYear} setExpYear={setExpYear}
-                  onAdd={addLoanType} onUpdate={updateLoanType} onDelete={deleteLoanType}
-                  loanPaid={loanPaid} toggleLoanPaid={toggleLoanPaid} setLoanPaidDate={setLoanPaidDate} toggleAllLoansPaid={toggleAllLoansPaid}
-                  paidPicker={paidPicker} setPaidPicker={setPaidPicker}
-                />
+                <LockedFeature featureKey="loans_view">
+                  <LoansView
+                    loanTypes={loanTypes}
+                    getLoanAmountForMonth={getLoanAmountForMonth}
+                    expYear={expYear} setExpYear={setExpYear}
+                    onAdd={addLoanType} onUpdate={updateLoanType} onDelete={deleteLoanType}
+                    loanPaid={loanPaid} toggleLoanPaid={toggleLoanPaid} setLoanPaidDate={setLoanPaidDate} toggleAllLoansPaid={toggleAllLoansPaid}
+                    paidPicker={paidPicker} setPaidPicker={setPaidPicker}
+                  />
+                </LockedFeature>
               ) : cat ? (
                 <>
                   <div className={styles.yearNav}>
@@ -502,7 +517,59 @@ export default function BudgetApp() {
                             className={styles.btnSmall} style={{color:"var(--red)",borderColor:"var(--red)"}}>Delete Selected</button>
                         </div>
                       )}
-                      <div className={styles.listWrap} style={{overflowX:"auto"}}>
+
+                      {/* Mobile card list — shown only on small screens */}
+                      <div className={styles.mobileListWrap}>
+                        {MONTHS.map((mName, mi) => {
+                          const key = mk(expYear, mi);
+                          const entry = expenses?.[cat.id]?.[key] || null;
+                          const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
+                          const isCurrent = expYear === getCY() && mi === getCM();
+                          const totalAmt = hasSubs
+                            ? (cat.subcategories||[]).reduce((s,sc) => s + (entry?.subAmounts?.[sc.id]||0), 0) || (entry?.amount||0)
+                            : (entry?.amount||0);
+                          const subAmounts = entry?.subAmounts || {};
+                          const subIds = hasSubs ? Object.keys(subAmounts).filter(id => (subAmounts[id]||0) > 0) : [];
+                          const paidCount = subIds.filter(id => entry?.subPaid?.[id]?.paid).length;
+                          const fullyPaid = hasSubs ? (subIds.length > 0 && paidCount === subIds.length) : !!entry?.paid;
+                          const partialPaid = hasSubs && paidCount > 0 && !fullyPaid;
+
+                          let pillText = "+ Add";
+                          let pillColor = "var(--faintest)";
+                          let pillBg = "transparent";
+                          let pillBorder = "1px solid var(--border)";
+                          if (fullyPaid) {
+                            pillText = "Paid"; pillColor = "var(--accent)"; pillBg = "var(--accent-bg)"; pillBorder = "1px solid var(--accent-light)";
+                          } else if (partialPaid) {
+                            pillText = `${paidCount}/${subIds.length} paid`; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                          } else if (totalAmt > 0) {
+                            pillText = "Unpaid"; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                          }
+
+                          return (
+                            <div key={mi}
+                              className={`stagger-row ${styles.mobileRow} ${isCurrent ? styles.mobileRowCurrent : ''}`}
+                              onClick={() => setModal({type:"editExp",catId:cat.id,catObj:cat,monthKey:key,monthLabel:`${mName} ${expYear}`,entry})}
+                              style={{opacity: isPast && !entry ? 0.45 : 1, animationDelay:`${mi*20}ms`}}>
+                              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                  <span style={{fontWeight:700,fontSize:14,color:isCurrent?"var(--accent)":"var(--text)"}}>{mName}</span>
+                                  {isCurrent && <span className={styles.nowBadge}>now</span>}
+                                </div>
+                                <span style={{fontSize:12,fontWeight:600,color:pillColor,background:pillBg,padding:"3px 10px",borderRadius:20,border:pillBorder}}>
+                                  {pillText}
+                                </span>
+                              </div>
+                              <div style={{marginTop:6,fontSize:20,fontWeight:700,color:totalAmt>0?"var(--text)":"var(--faint)"}}>
+                                {totalAmt > 0 ? fmt(totalAmt) : "—"}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Desktop table — hidden on mobile */}
+                      <div className={`${styles.listWrap} ${styles.desktopListWrap}`} style={{overflowX:"auto"}}>
                         <div className={styles.listHeader}>
                           <span style={{width:30}} onClick={e=>e.stopPropagation()}>
                             {filledKeys.length > 0 && (
@@ -594,7 +661,7 @@ export default function BudgetApp() {
                   <h2 className={styles.sectionTitle}>Fixed Incomes</h2>
                   <p className={styles.sectionSub}>Recurring monthly income. Schedule future raises by adding a new amount record with a future effective date.</p>
                 </div>
-                <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`}>+ Add Source</button>
+                <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary} ${styles.hideOnMobile}`}>+ Add Source</button>
               </div>
               {fixedIncomes.length === 0 ? (
                 <div className={styles.emptyState}>
@@ -651,7 +718,7 @@ export default function BudgetApp() {
                   <h2 className={styles.sectionTitle}>Variable Incomes</h2>
                   <p className={styles.sectionSub}>One-time or irregular income assigned to a specific month.</p>
                 </div>
-                <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`}>+ Add Entry</button>
+                <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary} ${styles.hideOnMobile}`}>+ Add Entry</button>
               </div>
               {variableIncomes.length === 0 ? (
                 <div className={styles.emptyState}>
@@ -714,18 +781,23 @@ export default function BudgetApp() {
 
         {/* ═══ BUDGET TAB ═══ */}
         {tab === "budget" && (
-          <BudgetView year={budgetYear} setYear={setBudgetYear} categories={categories} expenses={expenses}
-            getFixedIncomeForMonth={getFixedIncomeForMonth} getVarIncomeForMonth={getVarIncomeForMonth}
-            getTotalExpensesForMonth={getTotalExpensesForMonth} getPaidExpForMonth={getPaidExpForMonth}
-            getAnticipatedExpForMonth={getAnticipatedExpForMonth} getCatPaidForMonth={getCatPaidForMonth}
-            getExp={getExp} dark={dark} />
+          <LockedFeature featureKey="budget_view">
+            <BudgetView year={budgetYear} setYear={setBudgetYear} categories={categories} expenses={expenses}
+              getFixedIncomeForMonth={getFixedIncomeForMonth} getVarIncomeForMonth={getVarIncomeForMonth}
+              getTotalExpensesForMonth={getTotalExpensesForMonth} getPaidExpForMonth={getPaidExpForMonth}
+              getAnticipatedExpForMonth={getAnticipatedExpForMonth} getCatPaidForMonth={getCatPaidForMonth}
+              getExp={getExp} dark={dark} />
+          </LockedFeature>
         )}
       </main>
 
       {/* ═══ MODALS ═══ */}
       {modal && (
-        <div onClick={()=>setModal(null)} className={`overlay-mobile ${styles.overlay}`}>
-          <div onClick={e=>e.stopPropagation()} className="modal-mobile" style={{animation:"slideUp .25s"}}>
+        <PixelModalOverlay
+          onClose={() => setModal(null)}
+          overlayClass={`overlay-mobile ${styles.overlay}`}
+          innerClass="modal-mobile"
+        >
             {modal.type==="editExp" && (
               <ExpenseModal catObj={modal.catObj} monthKey={modal.monthKey} monthLabel={modal.monthLabel}
                 entry={modal.entry} catMaxYear={getCY()+(modal.catObj.maxYears||5)}
@@ -791,9 +863,24 @@ export default function BudgetApp() {
                   flash("Saved!");setModal(null);
                 }} onClose={()=>setModal(null)} />
             )}
-          </div>
+        </PixelModalOverlay>
+      )}
+      {/* Mobile thumb-zone action bar — only shown on small screens for tabs with add actions */}
+      {(tab === "incomes" || tab === "expenses") && (
+        <div className={styles.mobileActionBar}>
+          {tab === "incomes" && (
+            <>
+              <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Fixed</button>
+              <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Variable</button>
+            </>
+          )}
+          {tab === "expenses" && (
+            <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Add Category</button>
+          )}
         </div>
       )}
+
+      <SyncStatusIndicator />
     </div>
   );
 }

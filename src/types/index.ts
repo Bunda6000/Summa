@@ -75,4 +75,5 @@ export interface AppData {
   fixedIncomes: FixedIncome[];
   variableIncomes: VariableIncome[];
   _schemaVersion?: number;
+  _updatedAt?: string;
 }

@@ -197,3 +197,46 @@
   min-height: 44px;
   transition: opacity 0.25s;
 }
+
+/* ── Responsive monthly table ── */
+
+.mobileListWrap {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.mobileRow {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.mobileRow:active {
+  background: var(--card-hover);
+}
+
+.mobileRowCurrent {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.desktopListWrap {
+  /* visible on desktop; hidden on mobile via media query */
+}
+
+@media (max-width: 768px) {
+  .desktopListWrap {
+    display: none !important;
+  }
+
+  .mobileListWrap {
+    display: flex;
+  }
+}

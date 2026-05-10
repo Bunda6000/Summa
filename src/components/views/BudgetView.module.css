@@ -31,14 +31,29 @@
   letter-spacing: -0.3px;
 }
 
+/* Mobile-first: 2 columns on small screens */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
 .summaryCard {
   background: var(--card);
   border-radius: 18px;
-  padding: 22px 24px;
+  padding: 16px 18px;
   border: 1px solid var(--border);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s, border-color 0.3s;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  min-width: 0; /* prevent overflow in grid */
+}
+
+/* Mobile-first: single column stacking */
+.chartsRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 
 .chartCard {
@@ -74,4 +89,71 @@
   padding: 10px 12px;
   text-align: left;
   color: var(--text);
+}
+
+/* Filter chips: 44×44 touch target on mobile */
+.filterChip {
+  touch-action: manipulation;
+  min-height: 44px;
+}
+
+/* ── Desktop breakpoint: 2-column chart rows, 4-column summary ── */
+@media (min-width: 769px) {
+  .summaryGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .summaryCard {
+    padding: 22px 28px;
+  }
+
+  .chartsRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filterChip {
+    min-height: unset;
+  }
+}
+
+/* ── Mobile overrides ── */
+@media (max-width: 768px) {
+  .summaryCard {
+    padding: 14px 16px;
+  }
+
+  .chartCard {
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+
+  .chartTitle {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .yearLabel {
+    font-size: 20px;
+  }
+
+  /* Force single-column on chart rows even when inline style says otherwise */
+  .chartsRow {
+    grid-template-columns: 1fr !important;
+  }
+
+  .filterChip {
+    min-height: 44px !important;
+    padding: 6px 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .summaryCard {
+    padding: 10px 12px;
+  }
+
+  .chartCard {
+    padding: 12px;
+    border-radius: 14px;
+  }
 }

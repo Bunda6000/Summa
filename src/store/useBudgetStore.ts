@@ -7,16 +7,8 @@ import { defaultData } from '../constants';
 import { uid, today, mk, parseMk, getCY } from '../utils/dates';
 import { reorder } from '../utils/expressions';
 import type { AppData, LoanType, FixedIncome, VariableIncome, Category, ExpenseEntry } from '../types';
-
-let _cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
-
-function scheduleCloudSync(userId: string, data: AppData) {
-  if (_cloudSyncTimer) clearTimeout(_cloudSyncTimer);
-  _cloudSyncTimer = setTimeout(async () => {
-    const { error } = await supabase.from('user_data').upsert({ user_id: userId, data });
-    if (error) console.warn('[Summa] Cloud sync failed:', error.message);
-  }, 2000);
-}
+import useSyncStore from './useSyncStore';
+import { resolveConflict } from './syncHelpers';
 
 interface BudgetState {
   // ── State ──
@@ -102,14 +94,11 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
         loadStore(localKey, null as AppData | null),
       ]);
 
-      // Try to fetch cloud data; prefer it if no local data exists
+      // Fetch cloud snapshot and resolve conflicts via last-write-wins timestamp.
       let loaded: AppData;
       const { data: cloudRow } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle();
-      if (cloudRow?.data && !localData) {
-        loaded = cloudRow.data as AppData;
-      } else {
-        loaded = localData ?? defaultData();
-      }
+      const cloudData = cloudRow?.data ? (cloudRow.data as AppData) : null;
+      loaded = resolveConflict(localData, cloudData);
 
       if ((loaded._schemaVersion ?? 0) < 2) {
         const hasLoans = loaded.categories?.some(c => c.id === 'loans');
@@ -128,6 +117,7 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
         loaded._schemaVersion = 2;
       }
 
+      loaded._updatedAt = loaded._updatedAt ?? Date.now();   // preserve existing timestamp, or stamp fresh
       saveStore(localKey, loaded);
       set({ appData: loaded, dark: storedDark, initialized: true, _initializing: false });
       document.documentElement.dataset.theme = storedDark ? 'dark' : 'light';
@@ -139,17 +129,18 @@ const storeCreator: StateCreator<BudgetState, [['zustand/subscribeWithSelector',
   },
 
   resetStore: () => {
-    if (_cloudSyncTimer) { clearTimeout(_cloudSyncTimer); _cloudSyncTimer = null; }
+    useSyncStore.getState().cancelPendingSync();
     set({ appData: null, initialized: false, _initializing: false, userId: null });
   },
 
   // ── Persistence helper ──
   _save: (nextData: AppData) => {
     const { userId } = get();
-    set({ appData: nextData });
+    const stamped = { ...nextData, _updatedAt: new Date().toISOString() };
+    set({ appData: stamped });
     if (userId) {
-      saveStore(`budget-app-v2-${userId}`, nextData);
-      scheduleCloudSync(userId, nextData);
+      saveStore(`budget-app-v2-${userId}`, stamped);
+      useSyncStore.getState().scheduleSync(userId, stamped);
     }
   },
 

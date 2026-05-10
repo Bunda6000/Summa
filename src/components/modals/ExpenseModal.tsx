@@ -166,7 +166,7 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
               {(f.options || []).map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           ) : (
-            <input type={f.type === "number" ? "number" : "text"} value={fields[f.id] || ""} onChange={e => setField(f.id, e.target.value)} style={{ width: "100%" }} />
+            <input type="text" inputMode={f.type === "number" ? "decimal" : "text"} value={fields[f.id] || ""} onChange={e => setField(f.id, e.target.value)} style={{ width: "100%" }} />
           )}
         </div>
       ))}
@@ -217,7 +217,7 @@ export default function ExpenseModal({ catObj, monthKey, monthLabel, entry, catM
           </label>
           {applyEnabled && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, padding: "0 4px" }}>
-              <input type="number" min={1} value={applyCount} onChange={e => setApplyCount(Math.max(1, +e.target.value || 1))}
+              <input type="text" inputMode="numeric" min={1} value={applyCount} onChange={e => setApplyCount(Math.max(1, +e.target.value || 1))}
                 style={{ width: 70, textAlign: "center" }} />
               <select value={applyUnit} onChange={e => setApplyUnit(e.target.value)} style={{ width: 100 }}>
                 <option value="months">month{applyCount !== 1 ? "s" : ""}</option>

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+vi.mock('../../storage', () => ({
+  removeStore: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock the Supabase client module before importing the store
 vi.mock('../../lib/supabase', () => ({
   supabase: {
@@ -15,10 +19,14 @@ vi.mock('../../lib/supabase', () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
     },
+    functions: {
+      invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
   },
 }));
 
 import { supabase } from '../../lib/supabase';
+import { removeStore } from '../../storage';
 import useAuthStore from '../useAuthStore';
 
 const mockSignUp = vi.mocked(supabase.auth.signUp);
