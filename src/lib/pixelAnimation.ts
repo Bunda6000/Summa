@@ -84,11 +84,13 @@ export function animatePixelsFromPoint(
   container: HTMLElement,
   opts: PixelOpts = {}
 ): Promise<void> {
-  if (prefersReducedMotion() || isMobile()) return Promise.resolve();
+  if (prefersReducedMotion()) return Promise.resolve();
 
+  // Fewer particles on mobile for performance
+  const mob = isMobile();
   const {
-    count = 190,
-    minSize = 2, maxSize = 6,
+    count = mob ? 110 : 190,
+    minSize = 2, maxSize = mob ? 5 : 6,
     minDuration = 450, maxDuration = 650,
     maxDelay = 80,
   } = opts;

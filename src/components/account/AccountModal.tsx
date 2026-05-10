@@ -22,7 +22,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
 
   useLayoutEffect(() => {
     const triggerRect = getLastButtonRect();
-    if (!triggerRect || prefersReducedMotion() || isMobile()) return;
+    if (!triggerRect || prefersReducedMotion()) return;
     const rafId = requestAnimationFrame(() => {
       if (!cardRef.current) return;
       const card = cardRef.current;

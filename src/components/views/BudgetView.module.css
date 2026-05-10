@@ -75,3 +75,30 @@
   text-align: left;
   color: var(--text);
 }
+
+@media (max-width: 768px) {
+  .summaryCard {
+    padding: 14px 16px;
+  }
+  .chartCard {
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .chartTitle {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .yearLabel {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summaryCard {
+    padding: 10px 12px;
+  }
+  .chartCard {
+    padding: 12px;
+    border-radius: 14px;
+  }
+}
