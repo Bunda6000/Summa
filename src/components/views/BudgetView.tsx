@@ -145,7 +145,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
 
     if(trendView==="line"||trendView==="spline"||trendView==="step-line") {
       const type=trendView==="spline"?"monotone":trendView==="step-line"?"step":"linear";
-      return <ResponsiveContainer width="100%" height={chartH}><LineChart data={catTrendData}>{commonAxes()}<Legend wrapperStyle={{fontSize:11}}/>{activeCats.map(c=><Line key={c.id} type={type} dataKey={c.name} stroke={col(c)} strokeWidth={2} dot={false}/>)}</LineChart></ResponsiveContainer>;
+      return <ResponsiveContainer width="100%" height={chartH}><LineChart data={catTrendData}>{commonAxes()}{activeCats.map(c=><Line key={c.id} type={type} dataKey={c.name} stroke={col(c)} strokeWidth={2} dot={false}/>)}</LineChart></ResponsiveContainer>;
     }
     if(trendView==="stacked-area"||trendView==="stream") {
       const offset=trendView==="stream"?"wiggle":"none";
@@ -153,7 +153,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         <ResponsiveContainer width="100%" height={chartH}>
           <AreaChart data={catTrendData} stackOffset={offset as "none" | "wiggle"}>
             <defs>{activeCats.map(c=>{const cl=col(c);return <linearGradient key={c.id} id={`ag_${c.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={cl} stopOpacity={0.75}/><stop offset="95%" stopColor={cl} stopOpacity={0.12}/></linearGradient>;})}</defs>
-            {commonAxes()}<Legend wrapperStyle={{fontSize:11}}/>
+            {commonAxes()}
             {activeCats.map(c=><Area key={c.id} type="monotone" dataKey={c.name} stackId="a" stroke={col(c)} fill={`url(#ag_${c.id})`} strokeWidth={1.5}/>)}
           </AreaChart>
         </ResponsiveContainer>
@@ -206,7 +206,6 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
             <XAxis dataKey="month" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false}/>
             <YAxis reversed domain={[1,n||1]} tickCount={n} tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>`#${v}`}/>
             <Tooltip {...tipProps} formatter={(v: number,name: string)=>[`Rank #${v}`,name]}/>
-            <Legend wrapperStyle={{fontSize:11}}/>
             {activeCats.map(c=><Line key={c.id} type="monotone" dataKey={c.name} stroke={col(c)} strokeWidth={3} dot={{r:4,fill:col(c)}}/>)}
           </LineChart>
         </ResponsiveContainer>
@@ -223,7 +222,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         <button onClick={()=>setYear(year+1)} className={`year-btn-h ${styles.yearBtn}`}>▸</button>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:12,marginBottom:20}}>
+      <div className={styles.summaryGrid} style={{marginBottom:20}}>
         {[
           { label:"Total Income", value:yearTotals.income, color:"var(--accent)", icon:"↑", sub:null },
           { label:"Paid Expenses", value:yearTotals.paid, color:"var(--red)", icon:"↓", sub:null },
@@ -238,7 +237,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         ))}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+      <div className={styles.chartsRow}>
         <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"100ms",position:"relative",transformStyle:"preserve-3d"}}>
           <h3 className={styles.chartTitle}>Monthly Income vs Expenses</h3>
           <ResponsiveContainer width="100%" height={chartH}>
@@ -293,7 +292,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:catBreakdown.length>0?"1fr 1fr":"1fr",gap:14}}>
+      <div className={styles.chartsRow} style={{gridTemplateColumns:catBreakdown.length>0?"1fr 1fr":"1fr"}}>
         {catBreakdown.length > 0 && (
           <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
@@ -305,13 +304,13 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
               {catBreakdown.map(d=>{
                 const hidden=hiddenBkdCats.has(d.name);
                 return (
-                  <button key={d.name} onClick={()=>toggleBkdCat(d.name)} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${!hidden?d.color:"var(--border)"}`,background:!hidden?`${d.color}22`:"transparent",color:!hidden?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:!hidden?500:400,opacity:!hidden?1:0.55,fontFamily:"inherit"}}>
+                  <button key={d.name} onClick={()=>toggleBkdCat(d.name)} className={styles.filterChip} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${!hidden?d.color:"var(--border)"}`,background:!hidden?`${d.color}22`:"transparent",color:!hidden?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:!hidden?500:400,opacity:!hidden?1:0.55,fontFamily:"inherit"}}>
                     <span style={{width:8,height:8,borderRadius:4,background:!hidden?d.color:"var(--border)",flexShrink:0,transition:"background .15s"}}/>
                     {d.name}: {fmt(d.value)}
                   </button>
                 );
               })}
-              {hiddenBkdCats.size>0&&<button onClick={()=>setHiddenBkdCats(new Set())} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
+              {hiddenBkdCats.size>0&&<button onClick={()=>setHiddenBkdCats(new Set())} className={styles.filterChip} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
             </div>
           </div>
         )}
@@ -326,13 +325,13 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
               const active=selectedCats.length===0||selectedCats.includes(c.name);
               const color=CHART_COLORS[i%CHART_COLORS.length];
               return (
-                <button key={c.id} onClick={()=>toggleCat(c.name)} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${active?color:"var(--border)"}`,background:active?`${color}22`:"transparent",color:active?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:active?500:400,opacity:active?1:0.55,fontFamily:"inherit"}}>
+                <button key={c.id} onClick={()=>toggleCat(c.name)} className={styles.filterChip} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${active?color:"var(--border)"}`,background:active?`${color}22`:"transparent",color:active?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:active?500:400,opacity:active?1:0.55,fontFamily:"inherit"}}>
                   <span style={{width:8,height:8,borderRadius:4,background:active?color:"var(--border)",flexShrink:0,transition:"background .15s"}}/>
                   {c.name}
                 </button>
               );
             })}
-            {selectedCats.length>0&&<button onClick={()=>setSelectedCats([])} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
+            {selectedCats.length>0&&<button onClick={()=>setSelectedCats([])} className={styles.filterChip} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
           </div>
         </div>
       </div>
