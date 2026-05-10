@@ -17,6 +17,7 @@ import useBillingStore from "../../store/useBillingStore";
 import useSubscriptionStore from "../../subscription/useSubscriptionStore";
 import useBudgetStore from "../../store/useBudgetStore";
 import ConfirmDialog from "./ConfirmDialog";
+import SupportPanel from "./SupportPanel";
 import { LEGAL_URLS } from "../../constants";
 import styles from "./AccountModal.module.css";
 import { detectLegacyData } from "../../migration/migrateLocalData";
@@ -420,6 +421,9 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
             {/* Billing error / cancellation message */}
             {billingError && <p className={styles.errorMsg}>{billingError}</p>}
 
+            {/* Billing support — inline CTA near billing info */}
+            <SupportPanel variant="billing" />
+
             {error && <p className={styles.errorMsg}>{error}</p>}
 
             <button
@@ -453,6 +457,11 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                 </p>
               )}
             </div>
+
+            {/* General support section */}
+            <hr className={styles.divider} />
+            <p className={styles.sectionLabel}>Support</p>
+            <SupportPanel />
 
             {/* Legal links */}
             <p className={styles.legalText}>

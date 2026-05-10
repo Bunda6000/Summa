@@ -20,6 +20,7 @@ vi.mock("../../../lib/supabase", () => ({
 
 vi.mock("../../../subscription/useSubscriptionStore");
 vi.mock("../../../store/useBillingStore");
+vi.mock("../SupportPanel", () => ({ default: () => null }));
 
 import useProfileStore, {
   type Profile,
