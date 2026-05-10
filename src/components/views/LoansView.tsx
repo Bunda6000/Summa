@@ -101,7 +101,76 @@ export default function LoansView({ loanTypes, getLoanAmountForMonth, expYear, s
       {/* Monthly view */}
       {loanTypes.length > 0 && (
         <>
-          <div className={styles.listWrap} style={{ overflowX: "auto" }}>
+          {/* Mobile card list — shown only on small screens */}
+          <div className={styles.mobileListWrap}>
+            {MONTHS.map((mName, mi) => {
+              const key = mk(expYear, mi);
+              const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
+              const isCurrent = expYear === getCY() && mi === getCM();
+              const rowTotal = loanTypes.reduce((s, lt) => s + getLoanAmountForMonth(lt, key), 0);
+              const activeLTs = loanTypes.filter(lt => getLoanAmountForMonth(lt, key) > 0);
+              const paidCount = activeLTs.filter(lt => loanPaid[lt.id]?.[key]?.paid).length;
+              const allPaid = activeLTs.length > 0 && paidCount === activeLTs.length;
+              const anyPaidDate = activeLTs.map(lt => loanPaid[lt.id]?.[key]?.paidDate).find(d => d);
+              return (
+                <div key={mi}
+                  className={`stagger-row ${styles.mobileRow} ${isCurrent ? styles.mobileRowCurrent : ''}`}
+                  onClick={() => activeLTs.length > 0 && setPaidPicker({ loanMonth: key })}
+                  style={{ opacity: isPast && rowTotal === 0 ? 0.45 : 1, animationDelay: `${mi * 20}ms` }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: isCurrent ? "var(--accent)" : "var(--text)" }}>{mName}</span>
+                      {isCurrent && <span className={styles.nowBadge}>now</span>}
+                    </div>
+                    {activeLTs.length > 0 && (
+                      <span onClick={e => { e.stopPropagation(); allPaid ? toggleAllLoansPaid(activeLTs.map(lt => lt.id), key) : setPaidPicker({ loanMonth: key }); }}
+                        style={{ width: 24, height: 24, borderRadius: 6, border: allPaid ? "none" : "1.5px solid var(--faint)", background: allPaid ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                        {allPaid && <span style={{ color: "#fff", fontSize: 13 }}>✓</span>}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 20, fontWeight: 700, color: rowTotal > 0 ? "var(--red)" : "var(--faint)" }}>
+                    {rowTotal > 0 ? fmt(rowTotal) : "—"}
+                  </div>
+                  {allPaid && anyPaidDate && (
+                    <div style={{ marginTop: 3, fontSize: 11, color: "var(--accent)", fontWeight: 500 }}>{fmtDate(anyPaidDate)}</div>
+                  )}
+                  {!allPaid && paidCount > 0 && (
+                    <div style={{ marginTop: 3, fontSize: 11, color: "var(--amber)" }}>{paidCount}/{activeLTs.length} paid</div>
+                  )}
+                  {activeLTs.length > 1 && rowTotal > 0 && (
+                    <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {activeLTs.map(lt => {
+                        const isPd = loanPaid[lt.id]?.[key]?.paid;
+                        return (
+                          <span key={lt.id} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "var(--chip)", color: isPd ? "var(--accent)" : "var(--text2)" }}>
+                            {lt.name}: {fmt(getLoanAmountForMonth(lt, key))}{isPd ? " ✓" : ""}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {paidPicker?.loanMonth === key && (
+                    <div style={{ marginTop: 8 }} onClick={e => e.stopPropagation()}>
+                      <DatePicker value={anyPaidDate || today()} autoFocus compact
+                        monthKey={key}
+                        onChange={d => {
+                          const ids = activeLTs.filter(lt => !loanPaid[lt.id]?.[key]?.paid).map(lt => lt.id);
+                          if (ids.length) ids.forEach(id => setLoanPaidDate(id, key, d));
+                          else activeLTs.forEach(lt => setLoanPaidDate(lt.id, key, d));
+                          setPaidPicker(null);
+                        }}
+                        onBlur={() => setTimeout(() => setPaidPicker(null), 200)}
+                        style={{ border: "1.5px solid var(--accent)", color: "var(--text)" }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table — hidden on mobile */}
+          <div className={`${styles.listWrap} ${styles.desktopListWrap}`} style={{ overflowX: "auto" }}>
             <div className={styles.listHeader} style={{ minWidth: 80 + loanTypes.length * 120 + 90 + 170 }}>
               <span style={{ width: 80 }}>Month</span>
               {loanTypes.map(lt => (
