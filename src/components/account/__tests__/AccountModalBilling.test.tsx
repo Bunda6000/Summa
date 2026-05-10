@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
-vi.mock('../../../lib/supabase', () => ({
+vi.mock("../../../lib/supabase", () => ({
   supabase: {
     auth: {
       signUp: vi.fn(),
@@ -17,34 +17,42 @@ vi.mock('../../../lib/supabase', () => ({
   },
 }));
 
-vi.mock('../../../lib/billing');
-vi.mock('../../../store/useBillingStore');
+vi.mock("../../../lib/billing");
+vi.mock("../../../store/useBillingStore");
+vi.mock("../../../subscription/useSubscriptionStore");
 
-import useProfileStore, { type Profile } from '../../../profile/useProfileStore';
-import useAuthStore from '../../../auth/useAuthStore';
-import useBillingStore from '../../../store/useBillingStore';
-import AccountModal from '../AccountModal';
+import useProfileStore, {
+  type Profile,
+} from "../../../profile/useProfileStore";
+import useAuthStore from "../../../auth/useAuthStore";
+import useBillingStore from "../../../store/useBillingStore";
+import useSubscriptionStore from "../../../subscription/useSubscriptionStore";
+import AccountModal from "../AccountModal";
 
 const fakeSession = {
-  user: { id: 'user-123', email: 'alice@example.com', email_confirmed_at: '2024-01-01T00:00:00Z' },
-  access_token: 'tok',
-  refresh_token: 'ref',
+  user: {
+    id: "user-123",
+    email: "alice@example.com",
+    email_confirmed_at: "2024-01-01T00:00:00Z",
+  },
+  access_token: "tok",
+  refresh_token: "ref",
 } as never;
 
 const freeProfile: Profile = {
-  user_id: 'user-123',
-  display_name: 'Alice',
-  plan: 'free',
-  subscription_status: 'active',
+  user_id: "user-123",
+  display_name: "Alice",
+  plan: "free",
+  subscription_status: "active",
   renewal_date: null,
 };
 
 const paidProfile: Profile = {
-  user_id: 'user-123',
-  display_name: 'Alice',
-  plan: 'paid',
-  subscription_status: 'active',
-  renewal_date: '2026-06-01T10:00:00Z',
+  user_id: "user-123",
+  display_name: "Alice",
+  plan: "paid",
+  subscription_status: "active",
+  renewal_date: "2026-06-01T10:00:00Z",
 };
 
 beforeEach(() => {
@@ -61,38 +69,62 @@ beforeEach(() => {
     resendCooldownUntil: null,
     verificationError: null,
   });
-  useProfileStore.setState({ profile: freeProfile, loading: false, saving: false, error: null });
-  vi.spyOn(useProfileStore.getState(), 'loadProfile').mockResolvedValue(undefined);
+  useProfileStore.setState({
+    profile: freeProfile,
+    loading: false,
+    saving: false,
+    error: null,
+  });
+  vi.spyOn(useProfileStore.getState(), "loadProfile").mockResolvedValue(
+    undefined,
+  );
 
   // Default billing store state
   (useBillingStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-    status: 'idle',
+    status: "idle",
     error: null,
     purchase: vi.fn(),
     restorePurchases: vi.fn(),
     openManageSubscription: vi.fn(),
     clearError: vi.fn(),
   });
+
+  // Default subscription store state — not in trial
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (
+    useSubscriptionStore as unknown as ReturnType<typeof vi.fn>
+  ).mockImplementation((selector: any) =>
+    selector({ rawStatus: null, trialEndsAt: null, trialStartedAt: null }),
+  );
 });
 
 // ─── Upgrade button behaviour ─────────────────────────────────────────────────
 
-describe('AccountModal — Upgrade button', () => {
-  it('is visible for free-plan users with a confirmed email', () => {
+describe("AccountModal — Start Free Trial button", () => {
+  it("is visible for free-plan users with a confirmed email", () => {
     render(<AccountModal onClose={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /upgrade/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /start free trial/i }),
+    ).toBeInTheDocument();
   });
 
-  it('is not visible for paid-plan users', () => {
-    useProfileStore.setState({ profile: paidProfile, loading: false, saving: false, error: null });
+  it("is not visible for paid-plan users", () => {
+    useProfileStore.setState({
+      profile: paidProfile,
+      loading: false,
+      saving: false,
+      error: null,
+    });
     render(<AccountModal onClose={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: /upgrade/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /start free trial/i }),
+    ).toBeNull();
   });
 
-  it('calls billing store purchase with the user id when clicked', async () => {
+  it("calls billing store purchase with the user id when clicked", async () => {
     const mockPurchase = vi.fn().mockResolvedValue(undefined);
     (useBillingStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      status: 'idle',
+      status: "idle",
       error: null,
       purchase: mockPurchase,
       restorePurchases: vi.fn(),
@@ -101,14 +133,16 @@ describe('AccountModal — Upgrade button', () => {
     });
 
     render(<AccountModal onClose={vi.fn()} />);
-    await userEvent.click(screen.getByRole('button', { name: /upgrade/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /start free trial/i }),
+    );
 
-    await waitFor(() => expect(mockPurchase).toHaveBeenCalledWith('user-123'));
+    await waitFor(() => expect(mockPurchase).toHaveBeenCalledWith("user-123"));
   });
 
-  it('shows a spinner / disabled state while purchasing', () => {
+  it("shows a spinner / disabled state while purchasing", () => {
     (useBillingStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      status: 'purchasing',
+      status: "purchasing",
       error: null,
       purchase: vi.fn(),
       restorePurchases: vi.fn(),
@@ -117,39 +151,55 @@ describe('AccountModal — Upgrade button', () => {
     });
 
     render(<AccountModal onClose={vi.fn()} />);
-    const btn = screen.getByRole('button', { name: /processing|purchasing/i });
+    const btn = screen.getByRole("button", { name: /processing|purchasing/i });
     expect(btn).toBeDisabled();
   });
 });
 
 // ─── Manage Subscription button ───────────────────────────────────────────────
 
-describe('AccountModal — Manage Subscription button', () => {
-  it('is visible for paid-plan users', () => {
-    useProfileStore.setState({ profile: paidProfile, loading: false, saving: false, error: null });
+describe("AccountModal — Manage Subscription button", () => {
+  it("is visible for paid-plan users", () => {
+    useProfileStore.setState({
+      profile: paidProfile,
+      loading: false,
+      saving: false,
+      error: null,
+    });
     render(<AccountModal onClose={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /manage subscription/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /manage subscription/i }),
+    ).toBeInTheDocument();
   });
 
-  it('is not visible for free-plan users', () => {
+  it("is not visible for free-plan users", () => {
     render(<AccountModal onClose={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: /manage subscription/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /manage subscription/i }),
+    ).toBeNull();
   });
 
-  it('calls openManageSubscription when clicked', async () => {
+  it("calls openManageSubscription when clicked", async () => {
     const openManage = vi.fn().mockResolvedValue(undefined);
     (useBillingStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      status: 'idle',
+      status: "idle",
       error: null,
       purchase: vi.fn(),
       restorePurchases: vi.fn(),
       openManageSubscription: openManage,
       clearError: vi.fn(),
     });
-    useProfileStore.setState({ profile: paidProfile, loading: false, saving: false, error: null });
+    useProfileStore.setState({
+      profile: paidProfile,
+      loading: false,
+      saving: false,
+      error: null,
+    });
 
     render(<AccountModal onClose={vi.fn()} />);
-    await userEvent.click(screen.getByRole('button', { name: /manage subscription/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /manage subscription/i }),
+    );
 
     await waitFor(() => expect(openManage).toHaveBeenCalledOnce());
   });
@@ -157,11 +207,11 @@ describe('AccountModal — Manage Subscription button', () => {
 
 // ─── Billing error display ────────────────────────────────────────────────────
 
-describe('AccountModal — billing errors', () => {
-  it('shows a billing error message when billing store has an error', () => {
+describe("AccountModal — billing errors", () => {
+  it("shows a billing error message when billing store has an error", () => {
     (useBillingStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      status: 'error',
-      error: 'Payment failed. Please try again.',
+      status: "error",
+      error: "Payment failed. Please try again.",
       purchase: vi.fn(),
       restorePurchases: vi.fn(),
       openManageSubscription: vi.fn(),
@@ -172,10 +222,10 @@ describe('AccountModal — billing errors', () => {
     expect(screen.getByText(/payment failed/i)).toBeInTheDocument();
   });
 
-  it('shows a cancellation message when the user dismisses the Play dialog', () => {
+  it("shows a cancellation message when the user dismisses the Play dialog", () => {
     (useBillingStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      status: 'idle',
-      error: 'Purchase canceled.',
+      status: "idle",
+      error: "Purchase canceled.",
       purchase: vi.fn(),
       restorePurchases: vi.fn(),
       openManageSubscription: vi.fn(),
