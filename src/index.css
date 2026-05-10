@@ -23,7 +23,7 @@ html, body {
   --pixel-color:#68C0A4; --pixel-glow:rgba(104,192,164,0.55);
   --bg:#111827; --card:rgba(28,33,52,0.78); --card-solid:#1C2134; --card-alt:rgba(32,38,60,0.82); --card-hover:rgba(38,46,70,0.88);
   --border:rgba(255,255,255,0.09); --border-light:rgba(255,255,255,0.04); --border-input:rgba(255,255,255,0.13);
-  --text:#E8E6E3; --text2:#A0A0A8; --muted:#6A6A72; --faint:#3A3A42; --faintest:#55555E;
+  --text:#E8E6E3; --text2:#A0A0A8; --muted:#9090A0; --faint:#3A3A42; --faintest:#72728A;
   --accent:#68C0A4; --accent-bg:rgba(104,192,164,0.08); --accent-light:rgba(104,192,164,0.15); --accent-glow:rgba(104,192,164,0.18);
   --chip:rgba(255,255,255,0.05); --chip2:rgba(255,255,255,0.03); --red:#F06B5E; --amber:#F5C542; --gold:#F5C542;
   --overlay:rgba(0,0,0,0.6); --toast-bg:#E8E6E3; --toast-fg:#111827;
