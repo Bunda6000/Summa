@@ -38,7 +38,7 @@ const useProfileStore = create<ProfileState>((set) => ({
     if (error && error.code === 'PGRST116') {
       const { data: created, error: createError } = await supabase
         .from('profiles')
-        .upsert({ user_id: userId, display_name: null, plan: 'free', subscription_status: 'active' })
+        .upsert({ user_id: userId, display_name: null, plan: 'paid', subscription_status: 'active' })
         .select('user_id, display_name, plan, subscription_status')
         .single();
 
