@@ -17,6 +17,8 @@
   padding: 32px;
   width: 100%;
   max-width: 420px;
+  max-height: 85dvh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -235,4 +237,20 @@
 .upgradeBtn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+.sectionLabel {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
 }

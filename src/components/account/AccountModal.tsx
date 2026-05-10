@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useProfileStore from '../../profile/useProfileStore';
 import useAuthStore from '../../auth/useAuthStore';
+import SupportPanel from './SupportPanel';
 import styles from './AccountModal.module.css';
 
 interface Props {
@@ -117,6 +118,9 @@ export default function AccountModal({ onClose }: Props) {
               <span className={styles.value}>{statusLabel}</span>
             </div>
 
+            {/* Billing support — inline CTA near billing info */}
+            <SupportPanel variant="billing" />
+
             {/* Upgrade — guarded by email verification */}
             {profile?.plan === 'free' && (
               <div className={styles.field}>
@@ -142,6 +146,11 @@ export default function AccountModal({ onClose }: Props) {
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
+
+            {/* General support section */}
+            <hr className={styles.divider} />
+            <p className={styles.sectionLabel}>Support</p>
+            <SupportPanel />
           </>
         )}
       </div>
