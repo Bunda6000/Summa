@@ -290,8 +290,8 @@ export default function BudgetApp() {
                   <BarChart data={miniData} barGap={2}>
                     <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"} />
-                    <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#6A6A72":"#9A9AA0"}} axisLine={false} tickLine={false} />
-                    <YAxis tick={{fontSize:11,fill:dark?"#6A6A72":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
+                    <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} />
+                    <YAxis tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
                     <Tooltip formatter={(v: number)=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
                     <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
                     <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
