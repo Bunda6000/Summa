@@ -87,6 +87,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const handleSave = async () => {
     if (!userId) return;
     await updateDisplayName(userId, displayName);
+    if (!useProfileStore.getState().error) onClose();
   };
 
   const handleResend = async () => {
