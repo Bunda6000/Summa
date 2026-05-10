@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useAuthStore from '../../auth/useAuthStore';
 import { validateEmail, validatePassword } from '../../auth/validation';
+import { LEGAL_URLS } from '../../constants';
 import styles from './AuthForms.module.css';
 
 interface Props {
@@ -54,7 +55,7 @@ export default function SignUpForm({ onSwitchToSignIn }: Props) {
           className={`${styles.input} ${passwordErr ? styles.inputError : ''}`}
         />
         {passwordErr && <span role="alert" className={styles.errorMsg}>{passwordErr}</span>}
-        <span className={styles.hint}>Min 8 characters, one uppercase letter, one number.</span>
+        <span className={styles.hint}>Min 8 characters, one uppercase letter, one number, one special character (e.g. ! @ # $).</span>
       </div>
 
       {info && <p role="status" className={styles.infoMsg}>{info}</p>}
@@ -69,6 +70,28 @@ export default function SignUpForm({ onSwitchToSignIn }: Props) {
         <button type="button" onClick={onSwitchToSignIn} className={styles.switchLink}>
           Sign in
         </button>
+      </p>
+
+      <p className={styles.legalText}>
+        By creating an account you agree to our{' '}
+        <a
+          href={LEGAL_URLS.terms}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.legalLink}
+        >
+          Terms of Service
+        </a>{' '}
+        and{' '}
+        <a
+          href={LEGAL_URLS.privacy}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.legalLink}
+        >
+          Privacy Policy
+        </a>
+        .
       </p>
     </form>
   );

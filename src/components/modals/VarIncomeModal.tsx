@@ -24,7 +24,7 @@ export default function VarIncomeModal({ item, onSave, onClose }: VarIncomeModal
       <label className={styles.label}>Description *</label>
       <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Freelance project" style={{ width: "100%", marginBottom: 14 }} autoFocus />
       <label className={styles.label}>Amount *</label>
-      <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={{ width: "100%", marginBottom: 14 }} />
+      <input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={{ width: "100%", marginBottom: 14 }} />
       <label className={styles.label}>For Month</label>
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <select value={month} onChange={e => setMonth(+e.target.value)} style={{ flex: 1 }}>

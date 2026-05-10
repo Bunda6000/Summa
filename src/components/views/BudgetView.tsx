@@ -54,7 +54,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   const toggleCat = (name: string) => setSelectedCats(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
   const toggleBkdCat = (name: string) => setHiddenBkdCats(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
   const cc = { accent: dark?"#68C0A4":"#1A9E76", red: dark?"#F06B5E":"#D4453A", amber: dark?"#F5C542":"#C8850A",
-    grid: dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)", tick: dark?"#6A6A72":"#9A9AA0", anticipated: dark?"#C8850A":"#F2C8A0",
+    grid: dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)", tick: dark?"#9090A0":"#9A9AA0", anticipated: dark?"#C8850A":"#F2C8A0",
     green: dark?"#68C0A4":"#1A9E76" };
 
   const monthlyData = MONTHS.map((mName, mi) => {
@@ -90,17 +90,21 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   const tipCSS = {borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"};
   const viewSelect = (val: string, set: (v: string) => void, views: {id: string; label: string}[]) => <ViewSelect value={val} onChange={set} options={views} dark={dark} />;
 
+  // Responsive chart height: shorter on mobile so multiple charts fit on screen
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const chartH = vw <= 480 ? 150 : vw <= 768 ? 170 : 220;
+
   const renderBreakdownChart = () => {
     const visibleCatBreakdown = activeCatBreakdown; // use filter-aware data
     if(!visibleCatBreakdown.length) return <div style={{color:"var(--text-muted,#888)",textAlign:"center",padding:"40px 0",fontSize:13}}>{hiddenBkdCats.size>0?"All categories hidden":"No paid expenses for "+year}</div>;
     const tip = <Tooltip cursor={false} animationDuration={200} formatter={(v: number) => fmt(v)} contentStyle={tipCSS} itemStyle={{color:"var(--tooltip-text)"}} labelStyle={{color:"var(--tooltip-text)"}}/>;
-    if(breakdownView==="pie")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
-    if(breakdownView==="circular") return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
-    if(breakdownView==="fan")      return <ResponsiveContainer width="100%" height={210}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="76%" startAngle={180} endAngle={0} innerRadius={36} outerRadius={92} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
+    if(breakdownView==="pie")      return <ResponsiveContainer width="100%" height={chartH}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
+    if(breakdownView==="circular") return <ResponsiveContainer width="100%" height={chartH}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
+    if(breakdownView==="fan")      return <ResponsiveContainer width="100%" height={chartH}><PieChart><Pie data={visibleCatBreakdown} cx="50%" cy="76%" startAngle={180} endAngle={0} innerRadius={36} outerRadius={92} dataKey="value" stroke="none">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie>{tip}</PieChart></ResponsiveContainer>;
     if(breakdownView==="concentric") {
       const tot=visibleCatBreakdown.reduce((s,d)=>s+d.value,0),n=visibleCatBreakdown.length,rW=Math.min(20,72/Math.max(n,1));
       return (
-        <ResponsiveContainer width="100%" height={210}>
+        <ResponsiveContainer width="100%" height={chartH}>
           <PieChart>
             {visibleCatBreakdown.map((d,i)=>{
               const r1=14+i*(rW+3),r2=r1+rW,prop=d.value/tot;
@@ -112,7 +116,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
       );
     }
     if(breakdownView==="windrose") return (
-      <ResponsiveContainer width="100%" height={210}>
+      <ResponsiveContainer width="100%" height={chartH}>
         <RadialBarChart cx="50%" cy="50%" innerRadius="8%" outerRadius="88%" data={visibleCatBreakdown.map(d=>({...d,fill:d.color}))}>
           <RadialBar {...{minAngle:15} as any} background clockWise dataKey="value">{visibleCatBreakdown.map((d,i)=><Cell key={i} fill={d.color}/>)}</RadialBar>
           {tip}
@@ -141,29 +145,29 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
 
     if(trendView==="line"||trendView==="spline"||trendView==="step-line") {
       const type=trendView==="spline"?"monotone":trendView==="step-line"?"step":"linear";
-      return <ResponsiveContainer width="100%" height={210}><LineChart data={catTrendData}>{commonAxes()}<Legend wrapperStyle={{fontSize:11}}/>{activeCats.map(c=><Line key={c.id} type={type} dataKey={c.name} stroke={col(c)} strokeWidth={2} dot={false}/>)}</LineChart></ResponsiveContainer>;
+      return <ResponsiveContainer width="100%" height={chartH}><LineChart data={catTrendData}>{commonAxes()}{activeCats.map(c=><Line key={c.id} type={type} dataKey={c.name} stroke={col(c)} strokeWidth={2} dot={false}/>)}</LineChart></ResponsiveContainer>;
     }
     if(trendView==="stacked-area"||trendView==="stream") {
       const offset=trendView==="stream"?"wiggle":"none";
       return (
-        <ResponsiveContainer width="100%" height={210}>
+        <ResponsiveContainer width="100%" height={chartH}>
           <AreaChart data={catTrendData} stackOffset={offset as "none" | "wiggle"}>
             <defs>{activeCats.map(c=>{const cl=col(c);return <linearGradient key={c.id} id={`ag_${c.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={cl} stopOpacity={0.75}/><stop offset="95%" stopColor={cl} stopOpacity={0.12}/></linearGradient>;})}</defs>
-            {commonAxes()}<Legend wrapperStyle={{fontSize:11}}/>
+            {commonAxes()}
             {activeCats.map(c=><Area key={c.id} type="monotone" dataKey={c.name} stackId="a" stroke={col(c)} fill={`url(#ag_${c.id})`} strokeWidth={1.5}/>)}
           </AreaChart>
         </ResponsiveContainer>
       );
     }
     if(trendView==="stacked-bar") return (
-      <ResponsiveContainer width="100%" height={210}>
+      <ResponsiveContainer width="100%" height={chartH}>
         <BarChart data={catTrendData}>{commonAxes()}
           {activeCats.map(c=><Bar key={c.id} dataKey={c.name} stackId={selectedCats.length!==1?"a":undefined} fill={col(c)} radius={selectedCats.length===1?[4,4,0,0]:undefined}/>)}
         </BarChart>
       </ResponsiveContainer>
     );
     if(trendView==="stacked-column") return (
-      <ResponsiveContainer width="100%" height={210}>
+      <ResponsiveContainer width="100%" height={chartH}>
         <BarChart data={catTrendData} layout="vertical">{commonAxes(true)}
           {activeCats.map(c=><Bar key={c.id} dataKey={c.name} stackId="a" fill={col(c)}/>)}
         </BarChart>
@@ -174,7 +178,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
       if(!tmData.length) return <div style={{padding:40,textAlign:"center",color:"var(--text-muted,#888)",fontSize:13}}>No paid expenses</div>;
       const isConvex=trendView==="convex-treemap";
       return (
-        <ResponsiveContainer width="100%" height={210}>
+        <ResponsiveContainer width="100%" height={chartH}>
           <Treemap data={tmData} dataKey="size" stroke="none" animationDuration={300}
             content={(({x,y,width,height,name,color:clr,depth}: any)=>{
               if(!width||!height||width<3||height<3||depth===0) return null;
@@ -196,13 +200,12 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         return row;
       });
       return (
-        <ResponsiveContainer width="100%" height={210}>
+        <ResponsiveContainer width="100%" height={chartH}>
           <LineChart data={rankData}>
             <CartesianGrid strokeDasharray="3 3" stroke={cc.grid}/>
             <XAxis dataKey="month" tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false}/>
             <YAxis reversed domain={[1,n||1]} tickCount={n} tick={{fontSize:11,fill:cc.tick}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>`#${v}`}/>
             <Tooltip {...tipProps} formatter={(v: number,name: string)=>[`Rank #${v}`,name]}/>
-            <Legend wrapperStyle={{fontSize:11}}/>
             {activeCats.map(c=><Line key={c.id} type="monotone" dataKey={c.name} stroke={col(c)} strokeWidth={3} dot={{r:4,fill:col(c)}}/>)}
           </LineChart>
         </ResponsiveContainer>
@@ -219,7 +222,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         <button onClick={()=>setYear(year+1)} className={`year-btn-h ${styles.yearBtn}`}>▸</button>
       </div>
 
-      <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:14,marginBottom:28}}>
+      <div className={styles.summaryGrid} style={{marginBottom:20}}>
         {[
           { label:"Total Income", value:yearTotals.income, color:"var(--accent)", icon:"↑", sub:null },
           { label:"Paid Expenses", value:yearTotals.paid, color:"var(--red)", icon:"↓", sub:null },
@@ -228,16 +231,16 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         ].map((c,i)=>(
           <div key={i} className={`summary-h stagger-card glass-card chart-3d ${styles.summaryCard}`} style={{animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
             <span style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif"}}>{c.icon} {c.label}</span>
-            <div style={{fontSize:28,fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
+            <div style={{fontSize:'clamp(18px,4.5vw,26px)',fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
             {c.sub && <div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{c.sub}</div>}
           </div>
         ))}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+      <div className={styles.chartsRow}>
         <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"100ms",position:"relative",transformStyle:"preserve-3d"}}>
           <h3 className={styles.chartTitle}>Monthly Income vs Expenses</h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={chartH}>
             <BarChart data={monthlyData} barGap={2}>
               <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
               <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
@@ -272,7 +275,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
 
         <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"200ms",position:"relative",transformStyle:"preserve-3d"}}>
           <h3 className={styles.chartTitle}>Monthly Balance</h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={chartH}>
             <AreaChart data={monthlyData}>
               <defs>
                 <linearGradient id="balG" x1="0" y1="0" x2="0" y2="1">
@@ -289,7 +292,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         </div>
       </div>
 
-      <div className="budget-grid-2" style={{display:"grid",gridTemplateColumns:catBreakdown.length>0?"1fr 1fr":"1fr",gap:14}}>
+      <div className={styles.chartsRow} style={{gridTemplateColumns:catBreakdown.length>0?"1fr 1fr":"1fr"}}>
         {catBreakdown.length > 0 && (
           <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
@@ -301,13 +304,13 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
               {catBreakdown.map(d=>{
                 const hidden=hiddenBkdCats.has(d.name);
                 return (
-                  <button key={d.name} onClick={()=>toggleBkdCat(d.name)} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${!hidden?d.color:"var(--border)"}`,background:!hidden?`${d.color}22`:"transparent",color:!hidden?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:!hidden?500:400,opacity:!hidden?1:0.55,fontFamily:"inherit"}}>
+                  <button key={d.name} onClick={()=>toggleBkdCat(d.name)} className={styles.filterChip} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${!hidden?d.color:"var(--border)"}`,background:!hidden?`${d.color}22`:"transparent",color:!hidden?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:!hidden?500:400,opacity:!hidden?1:0.55,fontFamily:"inherit"}}>
                     <span style={{width:8,height:8,borderRadius:4,background:!hidden?d.color:"var(--border)",flexShrink:0,transition:"background .15s"}}/>
                     {d.name}: {fmt(d.value)}
                   </button>
                 );
               })}
-              {hiddenBkdCats.size>0&&<button onClick={()=>setHiddenBkdCats(new Set())} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
+              {hiddenBkdCats.size>0&&<button onClick={()=>setHiddenBkdCats(new Set())} className={styles.filterChip} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
             </div>
           </div>
         )}
@@ -322,13 +325,13 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
               const active=selectedCats.length===0||selectedCats.includes(c.name);
               const color=CHART_COLORS[i%CHART_COLORS.length];
               return (
-                <button key={c.id} onClick={()=>toggleCat(c.name)} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${active?color:"var(--border)"}`,background:active?`${color}22`:"transparent",color:active?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:active?500:400,opacity:active?1:0.55,fontFamily:"inherit"}}>
+                <button key={c.id} onClick={()=>toggleCat(c.name)} className={styles.filterChip} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${active?color:"var(--border)"}`,background:active?`${color}22`:"transparent",color:active?"var(--text)":"var(--text-muted,#999)",fontSize:11,cursor:"pointer",transition:"all .15s",fontWeight:active?500:400,opacity:active?1:0.55,fontFamily:"inherit"}}>
                   <span style={{width:8,height:8,borderRadius:4,background:active?color:"var(--border)",flexShrink:0,transition:"background .15s"}}/>
                   {c.name}
                 </button>
               );
             })}
-            {selectedCats.length>0&&<button onClick={()=>setSelectedCats([])} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
+            {selectedCats.length>0&&<button onClick={()=>setSelectedCats([])} className={styles.filterChip} style={{padding:"4px 10px",borderRadius:20,border:"1px dashed var(--border)",background:"transparent",color:"var(--text-muted,#999)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Show all</button>}
           </div>
         </div>
       </div>
