@@ -24,6 +24,7 @@ import FixedIncomeModal from './components/modals/FixedIncomeModal';
 import VarIncomeModal from './components/modals/VarIncomeModal';
 import LockedFeature from './components/subscription/LockedFeature';
 import GracePeriodBanner from './components/billing/GracePeriodBanner';
+import TrialBanner from './components/billing/TrialBanner';
 import PixelModalOverlay from './components/PixelModalOverlay';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
@@ -60,6 +61,7 @@ interface ColDef {
 export default function BudgetApp() {
   // Auth
   const signOut = useAuthStore(state => state.signOut);
+  const userId = useAuthStore(state => state.session?.user.id ?? '');
   const [showAccount, setShowAccount] = useState(false);
   const [showBilling, setShowBilling] = useState(false);
 
@@ -183,6 +185,7 @@ export default function BudgetApp() {
         </div>
       </header>
 
+      <TrialBanner userId={userId} />
       <GracePeriodBanner />
 
       <main className={`main-area ${styles.main}`}>
