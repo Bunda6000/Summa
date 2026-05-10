@@ -9,9 +9,9 @@ export type FeatureKey = 'budget_view' | 'loans_view' | 'dashboard_overview' | '
 
 export const FEATURE_FLAGS: Record<FeatureKey, FeatureTier> = {
   dashboard_overview: 'free',
-  budget_view: 'paid',
-  loans_view: 'paid',
-  cloud_sync: 'paid',
+  budget_view: 'free',
+  loans_view: 'free',
+  cloud_sync: 'free',
 };
 
 /**
