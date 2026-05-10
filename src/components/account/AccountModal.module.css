@@ -17,6 +17,8 @@
   padding: 32px;
   width: 100%;
   max-width: 420px;
+  max-height: 85dvh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -123,12 +125,6 @@
   background: var(--accent-bg);
   color: var(--accent);
   border: 1px solid var(--accent-light);
-}
-
-.chipTrial {
-  background: color-mix(in srgb, var(--accent, #6366f1) 12%, transparent);
-  color: var(--accent, #6366f1);
-  border: 1px solid color-mix(in srgb, var(--accent, #6366f1) 35%, transparent);
 }
 
 .saveBtn {
@@ -243,114 +239,18 @@
   cursor: not-allowed;
 }
 
-.manageSubBtn {
-  padding: 10px 0;
-  background: transparent;
-  color: var(--accent);
-  border: 1.5px solid var(--accent);
-  border-radius: 10px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
-  width: 100%;
-}
-
-.manageSubBtn:hover {
-  background: var(--accent-bg);
-}
-
-.logoutBtn {
-  padding: 10px 0;
-  background: transparent;
-  color: var(--text2);
-  border: 1.5px solid var(--border-input);
-  border-radius: 10px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  width: 100%;
-}
-
-.logoutBtn:hover {
-  background: var(--chip);
-  color: var(--text);
-}
-
-.dangerZone {
-  border-top: 1px solid color-mix(in srgb, var(--red) 20%, transparent);
-  padding-top: 16px;
-  margin-top: 4px;
-}
-
-.deleteBtn {
-  padding: 10px 0;
-  background: transparent;
-  color: var(--red);
-  border: 1.5px solid color-mix(in srgb, var(--red) 50%, transparent);
-  border-radius: 10px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-  width: 100%;
-}
-
-.deleteBtn:hover {
-  background: color-mix(in srgb, var(--red) 8%, transparent);
-}
-
-.successMsg {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-light);
-  border-radius: 8px;
-  padding: 10px 14px;
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
   margin: 0;
 }
 
-.updateEmailBtn {
-  align-self: flex-start;
-  padding: 7px 14px;
-  background: none;
-  border: 1.5px solid var(--border-input);
-  border-radius: 8px;
+.sectionLabel {
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text2);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  min-height: 44px;
-}
-
-.updateEmailBtn:hover:not(:disabled) {
-  background: var(--chip);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.updateEmailBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.legalText {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
   color: var(--muted);
-  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   margin: 0;
-}
-
-.legalLink {
-  color: var(--muted);
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }

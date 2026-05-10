@@ -8,7 +8,6 @@ import useBudgetStore from './store/useBudgetStore';
 import useUIStore from './store/useUIStore';
 import useAuthStore from './auth/useAuthStore';
 import AccountModal from './components/account/AccountModal';
-import BillingModal from './components/billing/BillingModal';
 import styles from './App.module.css';
 import type { Category, ExpenseEntry } from './types';
 
@@ -61,9 +60,7 @@ interface ColDef {
 export default function BudgetApp() {
   // Auth
   const signOut = useAuthStore(state => state.signOut);
-  const userId = useAuthStore(state => state.session?.user.id ?? '');
   const [showAccount, setShowAccount] = useState(false);
-  const [showBilling, setShowBilling] = useState(false);
 
   // Budget data from store
   const appData = useBudgetStore(state => state.appData);
@@ -145,13 +142,7 @@ export default function BudgetApp() {
 
       {toast && <div className={styles.toast}>{toast}</div>}
 
-      {showAccount && (
-        <AccountModal
-          onClose={() => setShowAccount(false)}
-          onOpenBilling={() => { setShowAccount(false); setShowBilling(true); }}
-        />
-      )}
-      {showBilling && <BillingModal onClose={() => setShowBilling(false)} />}
+      {showAccount && <AccountModal onClose={() => setShowAccount(false)} />}
 
       {/* HEADER */}
       <header className={styles.header} style={{boxShadow:"var(--header-shadow)"}}>
@@ -178,8 +169,12 @@ export default function BudgetApp() {
               {dark ? "☀" : "☾"}
             </button>
             <button onClick={() => setShowAccount(true)} title="Account"
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:44,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
+              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
               Account
+            </button>
+            <button onClick={signOut} title="Logout"
+              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+              Logout
             </button>
           </div>
         </div>

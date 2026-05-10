@@ -1,170 +1,51 @@
-import {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  type ChangeEvent,
-} from "react";
-import {
-  animatePixelsFromPoint,
-  getLastButtonRect,
-  prefersReducedMotion,
-  isMobile,
-} from "../../lib/pixelAnimation";
-import useProfileStore from "../../profile/useProfileStore";
-import useAuthStore from "../../auth/useAuthStore";
-import useBillingStore from "../../store/useBillingStore";
-import useSubscriptionStore from "../../subscription/useSubscriptionStore";
-import useBudgetStore from "../../store/useBudgetStore";
-import ConfirmDialog from "./ConfirmDialog";
-import { LEGAL_URLS } from "../../constants";
-import styles from "./AccountModal.module.css";
-import { detectLegacyData } from "../../migration/migrateLocalData";
-import MigrationPanel from "../migration/MigrationPanel";
-import type { AppData } from "../../types";
+import { useState, useEffect } from 'react';
+import useProfileStore from '../../profile/useProfileStore';
+import useAuthStore from '../../auth/useAuthStore';
+import SupportPanel from './SupportPanel';
+import styles from './AccountModal.module.css';
 
 interface Props {
   onClose: () => void;
-  onOpenBilling?: () => void;
 }
 
-export default function AccountModal({ onClose, onOpenBilling }: Props) {
-  const cardRef = useRef<HTMLDivElement>(null);
+export default function AccountModal({ onClose }: Props) {
+  const { session, resendVerification, loading: authLoading, error: authError, info: authInfo } = useAuthStore();
+  const { profile, loading, saving, error, loadProfile, updateDisplayName } = useProfileStore();
 
-  useLayoutEffect(() => {
-    const triggerRect = getLastButtonRect();
-    if (!triggerRect || prefersReducedMotion()) return;
-    const rafId = requestAnimationFrame(() => {
-      if (!cardRef.current) return;
-      const card = cardRef.current;
-      const rect = card.getBoundingClientRect();
-      card.style.opacity = "0";
-      const container = document.createElement("div");
-      container.style.cssText =
-        "position:fixed;inset:0;pointer-events:none;z-index:9997;";
-      document.body.appendChild(container);
-      const cx = triggerRect.left + triggerRect.width / 2;
-      const cy = triggerRect.top + triggerRect.height / 2;
-      animatePixelsFromPoint(cx, cy, rect, container).then(() => {
-        document.body.removeChild(container);
-        if (cardRef.current) {
-          cardRef.current.style.transition = "opacity 0.1s";
-          cardRef.current.style.opacity = "1";
-        }
-      });
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, []);
+  const [displayName, setDisplayName] = useState('');
 
-  const {
-    session,
-    signOut,
-    resendVerification,
-    deleteAccount,
-    updateEmail,
-    clearEmailStatus,
-    loading: authLoading,
-    error: authError,
-    info: authInfo,
-    emailSuccess,
-    emailError,
-  } = useAuthStore();
-  const { profile, loading, saving, error, loadProfile, updateDisplayName } =
-    useProfileStore();
-  const {
-    status: billingStatus,
-    error: billingError,
-    purchase,
-    openManageSubscription,
-    clearError,
-  } = useBillingStore();
-
-  const userId = session?.user.id ?? "";
-  const email = session?.user.email ?? "";
+  const userId = session?.user.id ?? '';
+  const email = session?.user.email ?? '';
   const isEmailVerified = !!session?.user.email_confirmed_at;
-
-  const [emailInput, setEmailInput] = useState(email);
-  const [displayName, setDisplayName] = useState("");
-  const [migrateLegacy, setMigrateLegacy] = useState<AppData | null>(null);
-  const [showMigrationPanel, setShowMigrationPanel] = useState(false);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) loadProfile(userId);
   }, [userId, loadProfile]);
 
   useEffect(() => {
-    detectLegacyData().then((data) => setMigrateLegacy(data));
-  }, []);
-
-  useEffect(() => {
     if (profile?.display_name) setDisplayName(profile.display_name);
   }, [profile?.display_name]);
-
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setEmailInput(e.target.value);
-    if (emailSuccess || emailError) clearEmailStatus();
-  };
-
-  const handleUpdateEmail = async () => {
-    const trimmed = emailInput.trim();
-    if (!trimmed || trimmed === email) return;
-    await updateEmail(trimmed);
-  };
 
   const handleSave = async () => {
     if (!userId) return;
     await updateDisplayName(userId, displayName);
-    if (!useProfileStore.getState().error) onClose();
   };
 
   const handleResend = async () => {
     if (email) await resendVerification(email);
   };
 
-  const handleUpgrade = async () => {
-    if (!userId) return;
-    clearError();
-    await purchase(userId);
-  };
-
-  const handleManageSubscription = async () => {
-    await openManageSubscription();
-  };
-
-  const rawStatus = useSubscriptionStore((state) => state.rawStatus);
-  const trialStartedAt = useSubscriptionStore((state) => state.trialStartedAt);
-  const trialEndsAt = useSubscriptionStore((state) => state.trialEndsAt);
-  const isTrial = rawStatus === "trial";
-
-  function fmtDate(iso: string) {
-    return new Date(iso).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  }
-
-  const planLabel =
-    profile?.plan === "paid" ? "Paid" : isTrial ? "Trial" : "Free";
+  const planLabel = profile?.plan === 'paid' ? 'Paid' : 'Free';
   const statusLabel =
-    profile?.subscription_status === "active"
-      ? "Active"
-      : profile?.subscription_status === "cancelled"
-        ? "Cancelled"
-        : "Past Due";
+    profile?.subscription_status === 'active'
+      ? 'Active'
+      : profile?.subscription_status === 'cancelled'
+      ? 'Cancelled'
+      : 'Past Due';
 
   return (
-    <div
-      className={styles.overlay}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Account"
-    >
-      <div ref={cardRef} className={styles.card}>
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Account">
+      <div className={styles.card}>
         <div className={styles.header}>
           <h2 className={styles.title}>Account</h2>
           <button
@@ -193,43 +74,18 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                   onClick={handleResend}
                   disabled={authLoading}
                 >
-                  {authLoading ? "Sending…" : "Resend verification email"}
+                  {authLoading ? 'Sending…' : 'Resend verification email'}
                 </button>
               </div>
             )}
 
-            {/* Email — editable */}
+            {/* Email — read only */}
             <div className={styles.field}>
-              <label htmlFor="email" className={styles.label}>
-                Email
-              </label>
-              <input
-                id="email"
-                aria-label="Email"
-                type="email"
-                value={emailInput}
-                onChange={handleEmailChange}
-                className={styles.input}
-                disabled={authLoading}
-              />
+              <span className={styles.label}>Email</span>
+              <span className={styles.value}>{email}</span>
               <span className={styles.hint}>
-                A confirmation email will be sent to verify the new address.
+                To change your email, re-verification is required — please contact support.
               </span>
-              {emailSuccess && (
-                <p className={styles.successMsg}>{emailSuccess}</p>
-              )}
-              {emailError && <p className={styles.verifyError}>{emailError}</p>}
-              <button
-                className={styles.updateEmailBtn}
-                onClick={handleUpdateEmail}
-                disabled={
-                  authLoading ||
-                  !emailInput.trim() ||
-                  emailInput.trim() === email
-                }
-              >
-                {authLoading ? "Updating…" : "Update Email"}
-              </button>
             </div>
 
             {/* Display name — editable */}
@@ -248,177 +104,38 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               />
             </div>
 
-            {migrateLegacy && !showMigrationPanel && (
-              <section
-                style={{
-                  marginTop: 24,
-                  paddingTop: 20,
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "var(--text2)",
-                    marginBottom: 6,
-                  }}
-                >
-                  Offline Data
-                </h3>
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    marginBottom: 12,
-                  }}
-                >
-                  You have local data that hasn't been imported yet.
-                </p>
-                <button
-                  onClick={() => setShowMigrationPanel(true)}
-                  style={{
-                    fontSize: 13,
-                    color: "var(--accent)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  Migrate offline data →
-                </button>
-              </section>
-            )}
-            {migrateLegacy && showMigrationPanel && (
-              <section
-                style={{
-                  marginTop: 24,
-                  paddingTop: 20,
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <MigrationPanel
-                  userId={userId}
-                  legacyData={migrateLegacy}
-                  onComplete={async () => {
-                    setMigrateLegacy(null);
-                    setShowMigrationPanel(false);
-                    useBudgetStore.getState().resetStore();
-                    if (userId)
-                      await useBudgetStore.getState().initStore(userId);
-                  }}
-                  onSkip={() => setShowMigrationPanel(false)}
-                />
-              </section>
-            )}
-
             {/* Plan */}
             <div className={styles.field}>
               <span className={styles.label}>Plan</span>
-              <span
-                className={`${styles.chip} ${profile?.plan === "paid" ? styles.chipPaid : isTrial ? styles.chipTrial : styles.chipFree}`}
-              >
+              <span className={`${styles.chip} ${profile?.plan === 'paid' ? styles.chipPaid : styles.chipFree}`}>
                 {planLabel}
               </span>
             </div>
 
-            {/* Trial dates — only shown during active trial */}
-            {isTrial && (
-              <>
-                {trialStartedAt && (
-                  <div className={styles.field}>
-                    <span className={styles.label}>Trial started</span>
-                    <span className={styles.value}>
-                      {fmtDate(trialStartedAt)}
-                    </span>
-                  </div>
-                )}
-                {trialEndsAt && (
-                  <div className={styles.field}>
-                    <span className={styles.label}>Trial ends</span>
-                    <span className={styles.value}>{fmtDate(trialEndsAt)}</span>
-                  </div>
-                )}
-              </>
-            )}
+            {/* Subscription status */}
+            <div className={styles.field}>
+              <span className={styles.label}>Subscription status</span>
+              <span className={styles.value}>{statusLabel}</span>
+            </div>
 
-            {/* Subscription status — only for non-trial users */}
-            {!isTrial && (
-              <div className={styles.field}>
-                <span className={styles.label}>Subscription status</span>
-                <span className={styles.value}>{statusLabel}</span>
-              </div>
-            )}
+            {/* Billing support — inline CTA near billing info */}
+            <SupportPanel variant="billing" />
 
-            {/* Trial: Subscribe Now to convert before trial ends */}
-            {isTrial && (
+            {/* Upgrade — guarded by email verification */}
+            {profile?.plan === 'free' && (
               <div className={styles.field}>
                 <button
                   className={styles.upgradeBtn}
-                  onClick={handleUpgrade}
-                  disabled={!isEmailVerified || billingStatus === "purchasing"}
-                  title={
-                    !isEmailVerified
-                      ? "Verify your email to subscribe"
-                      : undefined
-                  }
+                  disabled={!isEmailVerified}
+                  title={!isEmailVerified ? 'Verify your email to upgrade' : undefined}
                 >
-                  {billingStatus === "purchasing"
-                    ? "Processing…"
-                    : "Subscribe Now"}
-                </button>
-              </div>
-            )}
-
-            {/* Upgrade — guarded by email verification and billing state */}
-            {profile?.plan === "free" && !isTrial && (
-              <div className={styles.field}>
-                <button
-                  className={styles.upgradeBtn}
-                  onClick={handleUpgrade}
-                  disabled={!isEmailVerified || billingStatus === "purchasing"}
-                  title={
-                    !isEmailVerified
-                      ? "Verify your email to upgrade"
-                      : undefined
-                  }
-                >
-                  {billingStatus === "purchasing"
-                    ? "Processing…"
-                    : "Start Free Trial"}
+                  Upgrade to Paid
                 </button>
                 {!isEmailVerified && (
-                  <span className={styles.hint}>
-                    Email verification required to start a trial.
-                  </span>
+                  <span className={styles.hint}>Email verification required to purchase a subscription.</span>
                 )}
               </div>
             )}
-
-            {/* Manage Subscription — only shown for paid users */}
-            {profile?.plan === "paid" && (
-              <div className={styles.field}>
-                <button
-                  className={styles.manageSubBtn}
-                  onClick={handleManageSubscription}
-                >
-                  Manage Subscription
-                </button>
-              </div>
-            )}
-
-            {/* Billing & Receipts — available to all users */}
-            {onOpenBilling && (
-              <div className={styles.field}>
-                <button className={styles.manageSubBtn} onClick={onOpenBilling}>
-                  Billing &amp; Receipts
-                </button>
-              </div>
-            )}
-
-            {/* Billing error / cancellation message */}
-            {billingError && <p className={styles.errorMsg}>{billingError}</p>}
 
             {error && <p className={styles.errorMsg}>{error}</p>}
 
@@ -427,103 +144,16 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? 'Saving…' : 'Save'}
             </button>
 
-            {/* Logout */}
-            <button className={styles.logoutBtn} onClick={signOut}>
-              Log Out
-            </button>
-
-            {/* Delete account — danger zone */}
-            <div className={styles.dangerZone}>
-              <button
-                className={styles.deleteBtn}
-                onClick={() => {
-                  setDeleteError(null);
-                  setDeleteDialogOpen(true);
-                }}
-                disabled={authLoading}
-              >
-                {authLoading ? "Deleting…" : "Delete Account"}
-              </button>
-              {deleteError && (
-                <p className={styles.errorMsg} style={{ marginTop: 10 }}>
-                  {deleteError}
-                </p>
-              )}
-            </div>
-
-            {/* Legal links */}
-            <p className={styles.legalText}>
-              <a
-                href={LEGAL_URLS.privacy}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.legalLink}
-              >
-                Privacy Policy
-              </a>
-              {" · "}
-              <a
-                href={LEGAL_URLS.terms}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.legalLink}
-              >
-                Terms of Service
-              </a>
-            </p>
+            {/* General support section */}
+            <hr className={styles.divider} />
+            <p className={styles.sectionLabel}>Support</p>
+            <SupportPanel />
           </>
         )}
       </div>
-
-      {cancelDialogOpen && (
-        <ConfirmDialog
-          title="Cancel Subscription?"
-          message="Your subscription will remain active until the end of the billing period. To cancel, you'll be taken to Google Play."
-          confirmLabel="Go to Google Play"
-          cancelLabel="Keep Subscription"
-          onConfirm={async () => {
-            setCancelDialogOpen(false);
-            await openManageSubscription();
-          }}
-          onCancel={() => setCancelDialogOpen(false)}
-        />
-      )}
-
-      {downgradeDialogOpen && (
-        <ConfirmDialog
-          title="Change Plan?"
-          message="To change your plan, you'll be taken to Google Play."
-          confirmLabel="Go to Google Play"
-          cancelLabel="Keep Plan"
-          onConfirm={async () => {
-            setDowngradeDialogOpen(false);
-            await openManageSubscription();
-          }}
-          onCancel={() => setDowngradeDialogOpen(false)}
-        />
-      )}
-
-      {deleteDialogOpen && (
-        <ConfirmDialog
-          title="Delete Account?"
-          message="This will permanently delete your account and all your data. This action cannot be undone."
-          confirmLabel="Delete Forever"
-          onConfirm={async () => {
-            setDeleteDialogOpen(false);
-            await deleteAccount();
-            const err = useAuthStore.getState().error;
-            if (!err) {
-              onClose();
-            } else {
-              setDeleteError(err);
-            }
-          }}
-          onCancel={() => setDeleteDialogOpen(false)}
-        />
-      )}
     </div>
   );
 }
