@@ -60,7 +60,6 @@ interface ColDef {
 export default function BudgetApp() {
   // Auth
   const signOut = useAuthStore(state => state.signOut);
-  const userId = useAuthStore(state => state.session?.user.id ?? '');
   const [showAccount, setShowAccount] = useState(false);
 
   // Budget data from store
