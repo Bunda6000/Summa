@@ -127,6 +127,12 @@
   border: 1px solid var(--accent-light);
 }
 
+.chipTrial {
+  background: color-mix(in srgb, var(--accent, #6366f1) 12%, transparent);
+  color: var(--accent, #6366f1);
+  border: 1px solid color-mix(in srgb, var(--accent, #6366f1) 35%, transparent);
+}
+
 .saveBtn {
   padding: 11px 0;
   background: var(--accent);

@@ -37,11 +37,11 @@ export default function AccountModal({ onClose }: Props) {
 
   const planLabel = profile?.plan === 'paid' ? 'Paid' : 'Free';
   const statusLabel =
-    profile?.subscription_status === 'active'
-      ? 'Active'
-      : profile?.subscription_status === 'cancelled'
-      ? 'Cancelled'
-      : 'Past Due';
+    profile?.subscription_status === "active"
+      ? "Active"
+      : profile?.subscription_status === "cancelled"
+        ? "Cancelled"
+        : "Past Due";
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Account">
@@ -74,7 +74,7 @@ export default function AccountModal({ onClose }: Props) {
                   onClick={handleResend}
                   disabled={authLoading}
                 >
-                  {authLoading ? 'Sending…' : 'Resend verification email'}
+                  {authLoading ? "Sending…" : "Resend verification email"}
                 </button>
               </div>
             )}
@@ -107,16 +107,60 @@ export default function AccountModal({ onClose }: Props) {
             {/* Plan */}
             <div className={styles.field}>
               <span className={styles.label}>Plan</span>
-              <span className={`${styles.chip} ${profile?.plan === 'paid' ? styles.chipPaid : styles.chipFree}`}>
+              <span
+                className={`${styles.chip} ${profile?.plan === "paid" ? styles.chipPaid : isTrial ? styles.chipTrial : styles.chipFree}`}
+              >
                 {planLabel}
               </span>
             </div>
 
-            {/* Subscription status */}
-            <div className={styles.field}>
-              <span className={styles.label}>Subscription status</span>
-              <span className={styles.value}>{statusLabel}</span>
-            </div>
+            {/* Trial dates — only shown during active trial */}
+            {isTrial && (
+              <>
+                {trialStartedAt && (
+                  <div className={styles.field}>
+                    <span className={styles.label}>Trial started</span>
+                    <span className={styles.value}>
+                      {fmtDate(trialStartedAt)}
+                    </span>
+                  </div>
+                )}
+                {trialEndsAt && (
+                  <div className={styles.field}>
+                    <span className={styles.label}>Trial ends</span>
+                    <span className={styles.value}>{fmtDate(trialEndsAt)}</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Subscription status — only for non-trial users */}
+            {!isTrial && (
+              <div className={styles.field}>
+                <span className={styles.label}>Subscription status</span>
+                <span className={styles.value}>{statusLabel}</span>
+              </div>
+            )}
+
+            {/* Trial: Subscribe Now to convert before trial ends */}
+            {isTrial && (
+              <div className={styles.field}>
+                <button
+                  className={styles.upgradeBtn}
+                  onClick={handleUpgrade}
+                  disabled={!isEmailVerified || billingStatus === "purchasing"}
+                  title={
+                    !isEmailVerified
+                      ? "Verify your email to subscribe"
+                      : undefined
+                  }
+                >
+                  {billingStatus === "purchasing"
+                    ? "Processing…"
+                    : "Subscribe Now"}
+                </button>
+              </div>
+            )}
 
             {/* Billing support — inline CTA near billing info */}
             <SupportPanel variant="billing" />
@@ -132,7 +176,9 @@ export default function AccountModal({ onClose }: Props) {
                   Upgrade to Paid
                 </button>
                 {!isEmailVerified && (
-                  <span className={styles.hint}>Email verification required to purchase a subscription.</span>
+                  <span className={styles.hint}>
+                    Email verification required to start a trial.
+                  </span>
                 )}
               </div>
             )}
@@ -144,7 +190,7 @@ export default function AccountModal({ onClose }: Props) {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? "Saving…" : "Save"}
             </button>
 
             {/* General support section */}
