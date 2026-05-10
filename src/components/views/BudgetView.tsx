@@ -54,7 +54,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
   const toggleCat = (name: string) => setSelectedCats(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
   const toggleBkdCat = (name: string) => setHiddenBkdCats(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
   const cc = { accent: dark?"#68C0A4":"#1A9E76", red: dark?"#F06B5E":"#D4453A", amber: dark?"#F5C542":"#C8850A",
-    grid: dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)", tick: dark?"#6A6A72":"#9A9AA0", anticipated: dark?"#C8850A":"#F2C8A0",
+    grid: dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)", tick: dark?"#9090A0":"#9A9AA0", anticipated: dark?"#C8850A":"#F2C8A0",
     green: dark?"#68C0A4":"#1A9E76" };
 
   const monthlyData = MONTHS.map((mName, mi) => {
