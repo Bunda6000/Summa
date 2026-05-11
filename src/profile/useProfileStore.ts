@@ -42,7 +42,7 @@ const useProfileStore = create<ProfileState>((set) => ({
         .upsert({
           user_id: userId,
           display_name: null,
-          plan: "free",
+          plan: "paid",
           subscription_status: "active",
         })
         .select(
