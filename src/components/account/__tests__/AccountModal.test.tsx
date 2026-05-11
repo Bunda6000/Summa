@@ -9,6 +9,7 @@ vi.mock('../../../lib/supabase', () => ({
       signInWithPassword: vi.fn(),
       signOut: vi.fn(),
       getSession: vi.fn(),
+      updateUser: vi.fn(),
       onAuthStateChange: vi.fn(() => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
@@ -17,9 +18,17 @@ vi.mock('../../../lib/supabase', () => ({
   },
 }));
 
-import useProfileStore, { type Profile } from '../../../profile/useProfileStore';
-import useAuthStore from '../../../auth/useAuthStore';
-import AccountModal from '../AccountModal';
+vi.mock("../../../subscription/useSubscriptionStore");
+vi.mock("../../../store/useBillingStore");
+vi.mock("../SupportPanel", () => ({ default: () => null }));
+
+import useProfileStore, {
+  type Profile,
+} from "../../../profile/useProfileStore";
+import useAuthStore from "../../../auth/useAuthStore";
+import useSubscriptionStore from "../../../subscription/useSubscriptionStore";
+import useBillingStore from "../../../store/useBillingStore";
+import AccountModal from "../AccountModal";
 
 const fakeSession = {
   user: { id: 'user-123', email: 'alice@example.com', email_confirmed_at: '2024-01-01T00:00:00Z' },
@@ -34,27 +43,50 @@ const fakeSessionUnverified = {
 } as never;
 
 const fakeProfile: Profile = {
-  user_id: 'user-123',
-  display_name: 'Alice',
-  plan: 'free',
-  subscription_status: 'active',
+  user_id: "user-123",
+  display_name: "Alice",
+  plan: "free",
+  subscription_status: "active",
+  renewal_date: null,
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuthStore.setState({ session: fakeSession, loading: false, error: null, info: null, failedAttempts: 0, lockedUntil: null });
-  useProfileStore.setState({ profile: fakeProfile, loading: false, saving: false, error: null });
+  useAuthStore.setState({
+    session: fakeSession,
+    loading: false,
+    error: null,
+    info: null,
+    failedAttempts: 0,
+    lockedUntil: null,
+    emailSuccess: null,
+    emailError: null,
+  });
+  useProfileStore.setState({
+    profile: fakeProfile,
+    loading: false,
+    saving: false,
+    error: null,
+  });
   // Prevent loadProfile from hitting Supabase in tests that set state directly
   vi.spyOn(useProfileStore.getState(), 'loadProfile').mockResolvedValue(undefined);
+  vi.mocked(useBillingStore).mockReturnValue({
+    status: 'idle',
+    error: null,
+    purchase: vi.fn(),
+    openManageSubscription: vi.fn(),
+    clearError: vi.fn(),
+  } as never);
+  vi.mocked(useSubscriptionStore).mockImplementation((selector: (s: never) => unknown) =>
+    selector({ rawStatus: null, trialStartedAt: null, trialEndsAt: null } as never),
+  );
 });
 
-describe('AccountModal', () => {
-  it('renders email as read-only', () => {
+describe("AccountModal", () => {
+  it("renders email in an editable input", () => {
     render(<AccountModal onClose={vi.fn()} />);
-    expect(screen.getByText('alice@example.com')).toBeInTheDocument();
-    // email should not be in an editable input
-    const emailInput = screen.queryByRole('textbox', { name: /email/i });
-    expect(emailInput).toBeNull();
+    const emailInput = screen.getByRole("textbox", { name: /email/i });
+    expect(emailInput).toHaveValue("alice@example.com");
   });
 
   it('renders display name in an editable input', () => {
@@ -73,9 +105,11 @@ describe('AccountModal', () => {
     expect(screen.getByText(/active/i)).toBeInTheDocument();
   });
 
-  it('shows email re-verification note when user tries to change email', () => {
+  it("shows a hint that a confirmation email will be sent on change", () => {
     render(<AccountModal onClose={vi.fn()} />);
-    expect(screen.getByText(/re.?verif/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/confirmation email will be sent/i),
+    ).toBeInTheDocument();
   });
 
   it('calls updateDisplayName with new name on save', async () => {
@@ -169,5 +203,103 @@ describe('AccountModal — email verification banner', () => {
     useProfileStore.setState({ profile: { ...fakeProfile, plan: 'free' }, loading: false, saving: false, error: null });
     render(<AccountModal onClose={vi.fn()} />);
     expect(screen.getByRole('button', { name: /upgrade/i })).not.toBeDisabled();
+  });
+});
+
+describe("AccountModal — email update", () => {
+  beforeEach(() => {
+    vi.spyOn(useProfileStore.getState(), "loadProfile").mockResolvedValue(
+      undefined,
+    );
+  });
+
+  it("shows an Update Email button", () => {
+    render(<AccountModal onClose={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: /update email/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("disables Update Email when the input matches the current email", () => {
+    render(<AccountModal onClose={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: /update email/i }),
+    ).toBeDisabled();
+  });
+
+  it("enables Update Email when the user types a different address", async () => {
+    render(<AccountModal onClose={vi.fn()} />);
+    const emailInput = screen.getByRole("textbox", { name: /email/i });
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "new@example.com");
+    expect(
+      screen.getByRole("button", { name: /update email/i }),
+    ).not.toBeDisabled();
+  });
+
+  it("calls updateEmail with the new address on click", async () => {
+    const mockUpdate = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(useAuthStore.getState(), "updateEmail").mockImplementation(
+      mockUpdate,
+    );
+
+    render(<AccountModal onClose={vi.fn()} />);
+    const emailInput = screen.getByRole("textbox", { name: /email/i });
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "new@example.com");
+    await userEvent.click(
+      screen.getByRole("button", { name: /update email/i }),
+    );
+
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith("new@example.com"),
+    );
+  });
+
+  it("shows success message after successful update", async () => {
+    vi.spyOn(useAuthStore.getState(), "updateEmail").mockImplementation(
+      async () => {
+        useAuthStore.setState({
+          emailSuccess:
+            "Verification email sent. Check your inbox to confirm the new address.",
+          emailError: null,
+        });
+      },
+    );
+
+    render(<AccountModal onClose={vi.fn()} />);
+    const emailInput = screen.getByRole("textbox", { name: /email/i });
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "new@example.com");
+    await userEvent.click(
+      screen.getByRole("button", { name: /update email/i }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/verification email sent/i)).toBeInTheDocument(),
+    );
+  });
+
+  it("shows error message when update fails", async () => {
+    vi.spyOn(useAuthStore.getState(), "updateEmail").mockImplementation(
+      async () => {
+        useAuthStore.setState({
+          emailError: "Email address already in use",
+          emailSuccess: null,
+        });
+      },
+    );
+
+    render(<AccountModal onClose={vi.fn()} />);
+    const emailInput = screen.getByRole("textbox", { name: /email/i });
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "taken@example.com");
+    await userEvent.click(
+      screen.getByRole("button", { name: /update email/i }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/already in use/i)).toBeInTheDocument(),
+    );
   });
 });

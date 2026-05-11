@@ -18,6 +18,8 @@ vi.mock('../../../lib/supabase', () => ({
   },
 }));
 
+vi.mock('../SupportPanel', () => ({ default: () => null }));
+
 import useProfileStore, { type Profile } from '../../../profile/useProfileStore';
 import useAuthStore from '../../../auth/useAuthStore';
 import AccountModal from '../AccountModal';
