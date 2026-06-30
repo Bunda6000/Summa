@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type Tab = 'dashboard' | 'expenses' | 'incomes' | 'budget';
+
 export interface PaidPickerState {
   catId?: string;
   key?: string;
@@ -7,7 +9,7 @@ export interface PaidPickerState {
 }
 
 interface UIState {
-  tab: 'dashboard' | 'expenses' | 'incomes' | 'budget';
+  tab: Tab;
   catIdx: number;
   expYear: number;
   budgetYear: number;
