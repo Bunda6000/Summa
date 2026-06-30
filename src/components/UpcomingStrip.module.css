@@ -1,0 +1,100 @@
+.wrap {
+  margin-bottom: var(--space-md);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.seeAll {
+  font-size: 12px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  padding: 4px 0;
+  min-height: var(--touch-min);
+}
+
+.strip {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+.card {
+  flex-shrink: 0;
+  min-width: 140px;
+  height: 80px;
+  background: var(--card);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  padding: 12px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.catName {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.month {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.moreCard {
+  border-left-color: var(--border);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 2px;
+}
+
+.moreCount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.moreLabel {
+  font-size: 11px;
+  color: var(--faintest);
+}
