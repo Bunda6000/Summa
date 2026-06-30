@@ -26,6 +26,8 @@ import GracePeriodBanner from './components/billing/GracePeriodBanner';
 import TrialBanner from './components/billing/TrialBanner';
 import PixelModalOverlay from './components/PixelModalOverlay';
 import BottomPillNav from './components/BottomPillNav';
+import HeroMonthCard from './components/HeroMonthCard';
+import UpcomingStrip from './components/UpcomingStrip';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -263,85 +265,127 @@ export default function BudgetApp() {
           });
           recent.sort((a, b) => b.paidDate.localeCompare(a.paidDate));
           const recentSlice = recent.slice(0, 10);
+          const curMonthLabel = `${MONTHS[getCM()]} ${getCY()}`;
 
           return (
             <div style={{animation:"fadeIn .35s"}}>
-              <h2 className={styles.sectionTitle} style={{marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
-
-              {/* Summary cards */}
-              <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14,marginBottom:28}}>
-                {[
-                  { label:"Income", value:curIncome, color:"var(--accent)", icon:"↑" },
-                  { label:"Paid", value:curPaid, color:"var(--red)", icon:"↓" },
-                  { label:"Anticipated", value:curAnticipated, color:"var(--amber)", icon:"◷" },
-                  { label:"Balance", value:curBalance, color:curBalance>=0?"var(--accent)":"var(--red)", icon:"◎" },
-                ].map((c,i)=>(
-                  <div key={i} className={`summary-h stagger-card glass-card chart-3d ${styles.summaryCard}`} style={{animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
-                    <span style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif"}}>{c.icon} {c.label}</span>
-                    <div style={{fontSize:26,fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
-                  </div>
-                ))}
+              {/* ── Mobile home screen ── */}
+              <div className={styles.mobileOnly}>
+                <HeroMonthCard
+                  monthLabel={curMonthLabel}
+                  income={curIncome}
+                  paid={curPaid}
+                  balance={curBalance}
+                />
+                <UpcomingStrip
+                  items={upcoming}
+                  onSeeAll={() => setTab("expenses")}
+                />
+                <div className={styles.homeActions}>
+                  <button
+                    className={`btn-hover ${styles.btnPrimary}`}
+                    style={{touchAction:"manipulation"}}
+                    onClick={() => {
+                      if (cat) {
+                        setModal({type:"editExp", catId:cat.id, catObj:cat,
+                          monthKey:mk(getCY(),getCM()),
+                          monthLabel:curMonthLabel, entry:null});
+                      } else {
+                        setTab("expenses");
+                      }
+                    }}
+                  >
+                    + Log Expense
+                  </button>
+                  <button
+                    className={`btn-hover ${styles.btnGhost}`}
+                    style={{touchAction:"manipulation"}}
+                    onClick={() => setModal({type:"addVarIncome"})}
+                  >
+                    + Log Income
+                  </button>
+                </div>
               </div>
 
-              {/* Mini chart */}
-              <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"150ms",position:"relative",transformStyle:"preserve-3d"}}>
-                <h3 className={styles.chartTitle}>Last 6 Months</h3>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={miniData} barGap={2}>
-                    <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"} />
-                    <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} />
-                    <YAxis tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
-                    <Tooltip formatter={(v: number)=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
-                    <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
-                    <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {/* ── Desktop dashboard (unchanged) ── */}
+              <div className={styles.desktopOnly}>
+                <h2 className={styles.sectionTitle} style={{marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
 
-              {/* Two-column: Upcoming + Recent */}
-              <div className="budget-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                {/* Upcoming unpaid */}
-                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"250ms",position:"relative",transformStyle:"preserve-3d"}}>
-                  <h3 className={styles.chartTitle}>Upcoming Unpaid</h3>
-                  {upcoming.length === 0 ? (
-                    <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>All caught up — nothing unpaid.</p>
-                  ) : (
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      {upcoming.slice(0, 12).map((u, i) => (
-                        <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <span style={{fontSize:13,fontWeight:500}}>{u.cat}</span>
-                            {u.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {u.sub}</span>}
-                          </div>
-                          <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>{u.label}</span>
-                          <span style={{fontSize:14,fontWeight:600,color:"var(--amber)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(u.amount)}</span>
-                        </div>
-                      ))}
-                      {upcoming.length > 12 && <p style={{fontSize:11,color:"var(--faintest)",marginTop:6}}>+{upcoming.length - 12} more</p>}
+                {/* Summary cards */}
+                <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14,marginBottom:28}}>
+                  {[
+                    { label:"Income", value:curIncome, color:"var(--accent)", icon:"↑" },
+                    { label:"Paid", value:curPaid, color:"var(--red)", icon:"↓" },
+                    { label:"Anticipated", value:curAnticipated, color:"var(--amber)", icon:"◷" },
+                    { label:"Balance", value:curBalance, color:curBalance>=0?"var(--accent)":"var(--red)", icon:"◎" },
+                  ].map((c,i)=>(
+                    <div key={i} className={`summary-h stagger-card glass-card chart-3d ${styles.summaryCard}`} style={{animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
+                      <span style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif"}}>{c.icon} {c.label}</span>
+                      <div style={{fontSize:26,fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
                     </div>
-                  )}
+                  ))}
                 </div>
 
-                {/* Recent payments */}
-                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
-                  <h3 className={styles.chartTitle}>Recent Payments</h3>
-                  {recentSlice.length === 0 ? (
-                    <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>No payments recorded yet.</p>
-                  ) : (
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      {recentSlice.map((r, i) => (
-                        <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <span style={{fontSize:13,fontWeight:500}}>{r.cat}</span>
-                            {r.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {r.sub}</span>}
+                {/* Mini chart */}
+                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"150ms",position:"relative",transformStyle:"preserve-3d"}}>
+                  <h3 className={styles.chartTitle}>Last 6 Months</h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={miniData} barGap={2}>
+                      <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"} />
+                      <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} />
+                      <YAxis tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
+                      <Tooltip formatter={(v: number)=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
+                      <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
+                      <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Two-column: Upcoming + Recent */}
+                <div className="budget-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                  {/* Upcoming unpaid */}
+                  <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"250ms",position:"relative",transformStyle:"preserve-3d"}}>
+                    <h3 className={styles.chartTitle}>Upcoming Unpaid</h3>
+                    {upcoming.length === 0 ? (
+                      <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>All caught up — nothing unpaid.</p>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        {upcoming.slice(0, 12).map((u, i) => (
+                          <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <span style={{fontSize:13,fontWeight:500}}>{u.cat}</span>
+                              {u.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {u.sub}</span>}
+                            </div>
+                            <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>{u.label}</span>
+                            <span style={{fontSize:14,fontWeight:600,color:"var(--amber)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(u.amount)}</span>
                           </div>
-                          <span style={{fontSize:11,color:"var(--accent)",flexShrink:0}}>{fmtDate(r.paidDate)}</span>
-                          <span style={{fontSize:14,fontWeight:600,color:"var(--red)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(r.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                        {upcoming.length > 12 && <p style={{fontSize:11,color:"var(--faintest)",marginTop:6}}>+{upcoming.length - 12} more</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent payments */}
+                  <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
+                    <h3 className={styles.chartTitle}>Recent Payments</h3>
+                    {recentSlice.length === 0 ? (
+                      <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>No payments recorded yet.</p>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        {recentSlice.map((r, i) => (
+                          <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <span style={{fontSize:13,fontWeight:500}}>{r.cat}</span>
+                              {r.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {r.sub}</span>}
+                            </div>
+                            <span style={{fontSize:11,color:"var(--accent)",flexShrink:0}}>{fmtDate(r.paidDate)}</span>
+                            <span style={{fontSize:14,fontWeight:600,color:"var(--red)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(r.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

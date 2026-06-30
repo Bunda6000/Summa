@@ -621,3 +621,30 @@
     display: flex;
   }
 }
+
+/* Mobile-only and desktop-only visibility helpers */
+.mobileOnly {
+  display: none;
+}
+
+.desktopOnly {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobileOnly {
+    display: block;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+}
+
+/* Home screen action buttons */
+.homeActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
