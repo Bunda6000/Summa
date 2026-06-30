@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SyncStatusIndicator from './components/SyncStatusIndicator';
 import { mk, parseMk, today, fmtDate, getCY, getCM, MIN_YEAR, MONTHS } from './utils/dates';
 import { fmt } from './utils/formatters';
@@ -25,6 +25,11 @@ import LockedFeature from './components/subscription/LockedFeature';
 import GracePeriodBanner from './components/billing/GracePeriodBanner';
 import TrialBanner from './components/billing/TrialBanner';
 import PixelModalOverlay from './components/PixelModalOverlay';
+import BottomPillNav from './components/BottomPillNav';
+import HeroMonthCard from './components/HeroMonthCard';
+import UpcomingStrip from './components/UpcomingStrip';
+import CategoryGridCard from './components/CategoryGridCard';
+import SegmentedToggle from './components/SegmentedToggle';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -137,6 +142,16 @@ export default function BudgetApp() {
 
   const cat = categories[catIdx] || categories[0];
   const catMaxYear = getCY() + (cat?.maxYears || 5);
+
+  // Mobile expenses two-step flow
+  const [mobileExpStep, setMobileExpStep] = useState<'picker' | 'months'>('picker');
+  const [slideDir, setSlideDir] = useState<'right' | 'left'>('right');
+  useEffect(() => {
+    if (tab !== 'expenses') setMobileExpStep('picker');
+  }, [tab]);
+
+  // Mobile incomes segmented toggle
+  const [incomeSegment, setIncomeSegment] = useState<'fixed' | 'variable'>('fixed');
 
   return (
     <div className={styles.root}>
@@ -262,85 +277,127 @@ export default function BudgetApp() {
           });
           recent.sort((a, b) => b.paidDate.localeCompare(a.paidDate));
           const recentSlice = recent.slice(0, 10);
+          const curMonthLabel = `${MONTHS[getCM()]} ${getCY()}`;
 
           return (
             <div style={{animation:"fadeIn .35s"}}>
-              <h2 className={styles.sectionTitle} style={{marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
-
-              {/* Summary cards */}
-              <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14,marginBottom:28}}>
-                {[
-                  { label:"Income", value:curIncome, color:"var(--accent)", icon:"↑" },
-                  { label:"Paid", value:curPaid, color:"var(--red)", icon:"↓" },
-                  { label:"Anticipated", value:curAnticipated, color:"var(--amber)", icon:"◷" },
-                  { label:"Balance", value:curBalance, color:curBalance>=0?"var(--accent)":"var(--red)", icon:"◎" },
-                ].map((c,i)=>(
-                  <div key={i} className={`summary-h stagger-card glass-card chart-3d ${styles.summaryCard}`} style={{animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
-                    <span style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif"}}>{c.icon} {c.label}</span>
-                    <div style={{fontSize:26,fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
-                  </div>
-                ))}
+              {/* ── Mobile home screen ── */}
+              <div className={styles.mobileOnly}>
+                <HeroMonthCard
+                  monthLabel={curMonthLabel}
+                  income={curIncome}
+                  paid={curPaid}
+                  balance={curBalance}
+                />
+                <UpcomingStrip
+                  items={upcoming}
+                  onSeeAll={() => setTab("expenses")}
+                />
+                <div className={styles.homeActions}>
+                  <button
+                    className={`btn-hover ${styles.btnPrimary}`}
+                    style={{touchAction:"manipulation"}}
+                    onClick={() => {
+                      if (cat) {
+                        setModal({type:"editExp", catId:cat.id, catObj:cat,
+                          monthKey:mk(getCY(),getCM()),
+                          monthLabel:curMonthLabel, entry:null});
+                      } else {
+                        setTab("expenses");
+                      }
+                    }}
+                  >
+                    + Log Expense
+                  </button>
+                  <button
+                    className={`btn-hover ${styles.btnGhost}`}
+                    style={{touchAction:"manipulation"}}
+                    onClick={() => setModal({type:"addVarIncome"})}
+                  >
+                    + Log Income
+                  </button>
+                </div>
               </div>
 
-              {/* Mini chart */}
-              <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"150ms",position:"relative",transformStyle:"preserve-3d"}}>
-                <h3 className={styles.chartTitle}>Last 6 Months</h3>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={miniData} barGap={2}>
-                    <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"} />
-                    <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} />
-                    <YAxis tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
-                    <Tooltip formatter={(v: number)=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
-                    <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
-                    <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {/* ── Desktop dashboard (unchanged) ── */}
+              <div className={styles.desktopOnly}>
+                <h2 className={styles.sectionTitle} style={{marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
 
-              {/* Two-column: Upcoming + Recent */}
-              <div className="budget-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                {/* Upcoming unpaid */}
-                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"250ms",position:"relative",transformStyle:"preserve-3d"}}>
-                  <h3 className={styles.chartTitle}>Upcoming Unpaid</h3>
-                  {upcoming.length === 0 ? (
-                    <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>All caught up — nothing unpaid.</p>
-                  ) : (
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      {upcoming.slice(0, 12).map((u, i) => (
-                        <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <span style={{fontSize:13,fontWeight:500}}>{u.cat}</span>
-                            {u.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {u.sub}</span>}
-                          </div>
-                          <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>{u.label}</span>
-                          <span style={{fontSize:14,fontWeight:600,color:"var(--amber)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(u.amount)}</span>
-                        </div>
-                      ))}
-                      {upcoming.length > 12 && <p style={{fontSize:11,color:"var(--faintest)",marginTop:6}}>+{upcoming.length - 12} more</p>}
+                {/* Summary cards */}
+                <div className="budget-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14,marginBottom:28}}>
+                  {[
+                    { label:"Income", value:curIncome, color:"var(--accent)", icon:"↑" },
+                    { label:"Paid", value:curPaid, color:"var(--red)", icon:"↓" },
+                    { label:"Anticipated", value:curAnticipated, color:"var(--amber)", icon:"◷" },
+                    { label:"Balance", value:curBalance, color:curBalance>=0?"var(--accent)":"var(--red)", icon:"◎" },
+                  ].map((c,i)=>(
+                    <div key={i} className={`summary-h stagger-card glass-card chart-3d ${styles.summaryCard}`} style={{animationDelay:`${i*80}ms`,position:"relative",transformStyle:"preserve-3d"}}>
+                      <span style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif"}}>{c.icon} {c.label}</span>
+                      <div style={{fontSize:26,fontWeight:700,color:c.color,marginTop:8,fontFamily:"'Space Grotesk',sans-serif",letterSpacing:"-0.5px"}}>{fmt(c.value)}</div>
                     </div>
-                  )}
+                  ))}
                 </div>
 
-                {/* Recent payments */}
-                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
-                  <h3 className={styles.chartTitle}>Recent Payments</h3>
-                  {recentSlice.length === 0 ? (
-                    <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>No payments recorded yet.</p>
-                  ) : (
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      {recentSlice.map((r, i) => (
-                        <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <span style={{fontSize:13,fontWeight:500}}>{r.cat}</span>
-                            {r.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {r.sub}</span>}
+                {/* Mini chart */}
+                <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"150ms",position:"relative",transformStyle:"preserve-3d"}}>
+                  <h3 className={styles.chartTitle}>Last 6 Months</h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={miniData} barGap={2}>
+                      <defs><filter id="bar3dBlur"><feGaussianBlur stdDeviation="6"/></filter></defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.06)"} />
+                      <XAxis dataKey="month" tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} />
+                      <YAxis tick={{fontSize:11,fill:dark?"#9090A0":"#9A9AA0"}} axisLine={false} tickLine={false} tickFormatter={(v: number)=>v>=1000?(v/1000).toFixed(0)+"k":`${v}`} />
+                      <Tooltip formatter={(v: number)=>fmt(v)} cursor={{fill:dark?"rgba(104,192,164,0.08)":"rgba(26,158,118,0.08)",radius:6}} contentStyle={{borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 8px 32px var(--shadow-lg)",fontSize:13,background:"var(--tooltip-bg)",color:"var(--tooltip-text)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} animationDuration={200} />
+                      <Bar dataKey="income" name="Income" fill={dark?"#68C0A4":"#1A9E76"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(104,192,164,0.5)":"rgba(26,158,118,0.4)"}/>} />
+                      <Bar dataKey="paid" name="Paid" fill={dark?"#F06B5E":"#D4453A"} radius={[5,5,0,0]} shape={(p: any)=><Bar3D {...p} isActive={false} radius={[5,5,0,0]}/>} activeBar={(p: any)=><Bar3D {...p} isActive={true} radius={[5,5,0,0]} glowColor={dark?"rgba(240,107,94,0.5)":"rgba(212,69,58,0.4)"}/>} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Two-column: Upcoming + Recent */}
+                <div className="budget-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                  {/* Upcoming unpaid */}
+                  <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"250ms",position:"relative",transformStyle:"preserve-3d"}}>
+                    <h3 className={styles.chartTitle}>Upcoming Unpaid</h3>
+                    {upcoming.length === 0 ? (
+                      <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>All caught up — nothing unpaid.</p>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        {upcoming.slice(0, 12).map((u, i) => (
+                          <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <span style={{fontSize:13,fontWeight:500}}>{u.cat}</span>
+                              {u.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {u.sub}</span>}
+                            </div>
+                            <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>{u.label}</span>
+                            <span style={{fontSize:14,fontWeight:600,color:"var(--amber)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(u.amount)}</span>
                           </div>
-                          <span style={{fontSize:11,color:"var(--accent)",flexShrink:0}}>{fmtDate(r.paidDate)}</span>
-                          <span style={{fontSize:14,fontWeight:600,color:"var(--red)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(r.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                        {upcoming.length > 12 && <p style={{fontSize:11,color:"var(--faintest)",marginTop:6}}>+{upcoming.length - 12} more</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent payments */}
+                  <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{animationDelay:"300ms",position:"relative",transformStyle:"preserve-3d"}}>
+                    <h3 className={styles.chartTitle}>Recent Payments</h3>
+                    {recentSlice.length === 0 ? (
+                      <p style={{fontSize:13,color:"var(--faintest)",fontStyle:"italic",padding:"12px 0"}}>No payments recorded yet.</p>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        {recentSlice.map((r, i) => (
+                          <div key={i} className="stagger-row" style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px",borderBottom:"1px solid var(--border-light)",animationDelay:`${i*30}ms`}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <span style={{fontSize:13,fontWeight:500}}>{r.cat}</span>
+                              {r.sub && <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· {r.sub}</span>}
+                            </div>
+                            <span style={{fontSize:11,color:"var(--accent)",flexShrink:0}}>{fmtDate(r.paidDate)}</span>
+                            <span style={{fontSize:14,fontWeight:600,color:"var(--red)",flexShrink:0,minWidth:60,textAlign:"right"}}>{fmt(r.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -349,7 +406,130 @@ export default function BudgetApp() {
 
         {/* ═══ EXPENSES TAB ═══ */}
         {tab === "expenses" && (
-          <div className="exp-layout" style={{animation:"fadeIn .35s",display:"flex",gap:20,alignItems:"flex-start"}}>
+          <div style={{animation:"fadeIn .35s"}}>
+
+            {/* ── Mobile two-step flow ── */}
+            <div className={styles.mobileOnly}>
+              {mobileExpStep === 'picker' && (
+                <div key="picker" className={slideDir === 'left' ? styles.slideFromLeft : ''}>
+                  <div className={styles.catGrid}>
+                    {categories.map((c, i) => {
+                      const curKey = mk(getCY(), getCM());
+                      const hasData = !!expenses?.[c.id]?.[curKey];
+                      return (
+                        <CategoryGridCard
+                          key={c.id}
+                          name={c.name}
+                          hasDataThisMonth={hasData}
+                          onPress={() => {
+                            setCatIdx(i);
+                            setExpYear(getCY());
+                            setExpSel(new Set());
+                            setSlideDir('right');
+                            setMobileExpStep('months');
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                  {categories.length === 0 && (
+                    <div className={styles.emptyState}>
+                      <div style={{fontSize:32,marginBottom:8,opacity:.5}}>📂</div>
+                      <p style={{fontWeight:500,marginBottom:4}}>No categories yet</p>
+                      <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnPrimary}`} style={{marginTop:12}}>
+                        Create your first category
+                      </button>
+                    </div>
+                  )}
+                  <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnGhost}`}
+                    style={{width:"100%",marginTop:8}}>
+                    + Add Category
+                  </button>
+                </div>
+              )}
+
+              {mobileExpStep === 'months' && cat && (
+                <div key="months" className={slideDir === 'right' ? styles.slideFromRight : ''}>
+                  {/* Sub-header */}
+                  <div className={styles.expMobileHeader}>
+                    <button className={styles.expMobileBack}
+                      onClick={() => { setSlideDir('left'); setMobileExpStep('picker'); }}
+                      aria-label="Back to categories">
+                      ‹
+                    </button>
+                    <span className={styles.expMobileCatName}>{cat.name}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <button onClick={() => { if(expYear > 2020) setExpYear(expYear - 1); }}
+                        className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear>2020?1:.3}}>◂</button>
+                      <span className={styles.yearLabel}>{expYear}</span>
+                      <button onClick={() => { if(expYear < catMaxYear-1) setExpYear(expYear + 1); }}
+                        className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
+                    </div>
+                  </div>
+
+                  {/* Month list */}
+                  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                    {MONTHS.map((mName, mi) => {
+                      const key = mk(expYear, mi);
+                      const entry = expenses?.[cat.id]?.[key] || null;
+                      const hasSubs = (cat.subcategories?.length ?? 0) > 0;
+                      const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
+                      const isCurrent = expYear === getCY() && mi === getCM();
+                      const totalAmt = hasSubs
+                        ? (cat.subcategories||[]).reduce((s,sc) => s + (entry?.subAmounts?.[sc.id]||0), 0) || (entry?.amount||0)
+                        : (entry?.amount||0);
+                      const subAmounts = entry?.subAmounts || {};
+                      const subIds = hasSubs ? Object.keys(subAmounts).filter(id => (subAmounts[id]||0) > 0) : [];
+                      const paidCount = subIds.filter(id => entry?.subPaid?.[id]?.paid).length;
+                      const fullyPaid = hasSubs ? (subIds.length > 0 && paidCount === subIds.length) : !!entry?.paid;
+                      const partialPaid = hasSubs && paidCount > 0 && !fullyPaid;
+
+                      let pillText = "+ Add";
+                      let pillColor = "var(--faintest)";
+                      let pillBg = "transparent";
+                      let pillBorder = "1px solid var(--border)";
+                      if (fullyPaid) {
+                        pillText = "Paid"; pillColor = "var(--accent)"; pillBg = "var(--accent-bg)"; pillBorder = "1px solid var(--accent-light)";
+                      } else if (partialPaid) {
+                        pillText = `${paidCount}/${subIds.length} paid`; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                      } else if (totalAmt > 0) {
+                        pillText = "Unpaid"; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                      }
+
+                      return (
+                        <div key={mi}
+                          className={`stagger-row ${styles.mobileRow} ${isCurrent ? styles.mobileRowCurrent : ''}`}
+                          onClick={() => setModal({type:"editExp",catId:cat.id,catObj:cat,monthKey:key,monthLabel:`${mName} ${expYear}`,entry})}
+                          style={{opacity: isPast && !entry ? 0.45 : 1, animationDelay:`${mi*20}ms`}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{fontWeight:700,fontSize:14,color:isCurrent?"var(--accent)":"var(--text)"}}>{mName}</span>
+                              {isCurrent && <span className={styles.nowBadge}>now</span>}
+                            </div>
+                            <span style={{fontSize:12,fontWeight:600,color:pillColor,background:pillBg,padding:"3px 10px",borderRadius:20,border:pillBorder}}>
+                              {pillText}
+                            </span>
+                          </div>
+                          <div style={{marginTop:6,fontSize:20,fontWeight:700,color:totalAmt>0?"var(--text)":"var(--faint)"}}>
+                            {totalAmt > 0 ? fmt(totalAmt) : "—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className={styles.yearTotal}>
+                    <span style={{color:"var(--muted)"}}>Total for {expYear}:</span>
+                    <span style={{fontWeight:600,fontSize:18,color:"var(--text)"}}>
+                      {fmt(MONTHS.reduce((s,_,mi) => s + (getExp(cat.id, mk(expYear,mi))?.amount||0), 0))}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Desktop layout (existing, unchanged) ── */}
+            <div className={`exp-layout ${styles.desktopOnly}`} style={{display:"flex",gap:20,alignItems:"flex-start"}}>
             {/* Left sidebar — category nav */}
             <div className={`cat-sidebar ${styles.catSidebar}`}>
               <div className={styles.catSidebarHeader}>
@@ -650,11 +830,94 @@ export default function BudgetApp() {
               )}
             </div>
           </div>
+          </div>
         )}
 
         {/* ═══ INCOMES TAB ═══ */}
         {tab === "incomes" && (
           <div style={{animation:"fadeIn .35s"}}>
+
+            {/* ── Mobile incomes: segmented toggle ── */}
+            <div className={styles.mobileOnly}>
+              <SegmentedToggle
+                options={[{ id: 'fixed', label: 'Fixed' }, { id: 'variable', label: 'Variable' }]}
+                value={incomeSegment}
+                onChange={(id) => setIncomeSegment(id as 'fixed' | 'variable')}
+              />
+
+              {incomeSegment === 'fixed' && (
+                <>
+                  {fixedIncomes.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <div style={{fontSize:32,marginBottom:8,opacity:.5}}>💰</div>
+                      <p style={{fontWeight:500,marginBottom:4}}>No fixed income sources yet</p>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:12}}>
+                      {fixedIncomes.map((src, si) => {
+                        const sorted = [...(src.records||[])].sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom));
+                        const current = sorted.filter(r=>r.effectiveFrom<=mk(getCY(),getCM())).pop();
+                        return (
+                          <div key={src.id} className={`stagger-card card-h ${styles.incomeCard}`} style={{animationDelay:`${si*80}ms`}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                              <div>
+                                <h3 style={{fontSize:16,fontWeight:600,marginBottom:4}}>{src.name}</h3>
+                                {current && (
+                                  <div style={{fontSize:22,fontWeight:700,color:"var(--accent)",fontFamily:"'Space Grotesk',sans-serif"}}>
+                                    {fmt(current.amount)}<span style={{fontSize:13,fontWeight:400,color:"var(--muted)"}}>/mo</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{display:"flex",gap:6}}>
+                                <button onClick={()=>setModal({type:"editFixedIncome",idx:si,src})} className={styles.btnSmall}>Edit</button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`}
+                    style={{width:"100%",touchAction:"manipulation"}}>
+                    + Add Fixed Source
+                  </button>
+                </>
+              )}
+
+              {incomeSegment === 'variable' && (
+                <>
+                  {variableIncomes.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <div style={{fontSize:32,marginBottom:8,opacity:.5}}>📋</div>
+                      <p style={{fontWeight:500,marginBottom:4}}>No variable income recorded yet</p>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                      {[...variableIncomes].sort((a,b)=>b.month.localeCompare(a.month)).map(v => {
+                        const {y,m} = parseMk(v.month);
+                        return (
+                          <div key={v.id} className={`${styles.mobileRow}`}
+                            onClick={()=>setModal({type:"editVarIncome",item:v})}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <span style={{fontWeight:600,fontSize:14}}>{v.name}</span>
+                              <span style={{fontWeight:700,fontSize:16,color:"var(--accent)"}}>{fmt(v.amount)}</span>
+                            </div>
+                            <span style={{fontSize:12,color:"var(--muted)",marginTop:4}}>{MONTHS[m]} {y}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`}
+                    style={{width:"100%",touchAction:"manipulation"}}>
+                    + Add Variable Entry
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* ── Desktop incomes (existing, unchanged) ── */}
+            <div className={styles.desktopOnly}>
             {/* Fixed */}
             <section>
               <div className={styles.sectionHead}>
@@ -777,6 +1040,7 @@ export default function BudgetApp() {
                 </>
               )}
             </section>
+            </div>
           </div>
         )}
 
@@ -866,20 +1130,7 @@ export default function BudgetApp() {
             )}
         </PixelModalOverlay>
       )}
-      {/* Mobile thumb-zone action bar — only shown on small screens for tabs with add actions */}
-      {(tab === "incomes" || tab === "expenses") && (
-        <div className={styles.mobileActionBar}>
-          {tab === "incomes" && (
-            <>
-              <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Fixed</button>
-              <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Variable</button>
-            </>
-          )}
-          {tab === "expenses" && (
-            <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Add Category</button>
-          )}
-        </div>
-      )}
+      <BottomPillNav tab={tab} setTab={(t) => setTab(t as "dashboard" | "expenses" | "incomes" | "budget")} />
 
       <SyncStatusIndicator />
     </div>

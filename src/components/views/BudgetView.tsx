@@ -14,6 +14,7 @@ import { mk, MONTHS } from '../../utils/dates';
 import { fmt } from '../../utils/formatters';
 import { CHART_COLORS } from '../../constants';
 import styles from './BudgetView.module.css';
+import MonthDetailAccordion from '../MonthDetailAccordion';
 import type { Category, Expenses } from '../../types';
 
 interface BudgetViewProps {
@@ -222,6 +223,20 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         <button onClick={()=>setYear(year+1)} className={`year-btn-h ${styles.yearBtn}`}>▸</button>
       </div>
 
+      {/* Mobile metric chips — 3 values, replaces 4-card summaryGrid on mobile */}
+      <div className={styles.metricChips}>
+        {[
+          { label: 'Income', value: yearTotals.income, color: 'var(--accent)' },
+          { label: 'Paid', value: yearTotals.paid, color: 'var(--red)' },
+          { label: 'Balance', value: yearTotals.balance, color: yearTotals.balance >= 0 ? 'var(--accent)' : 'var(--red)' },
+        ].map((m) => (
+          <div key={m.label} className={styles.metricChip}>
+            <span className={styles.metricChipLabel}>{m.label}</span>
+            <span className={styles.metricChipValue} style={{ color: m.color }}>{fmt(m.value)}</span>
+          </div>
+        ))}
+      </div>
+
       <div className={styles.summaryGrid} style={{marginBottom:20}}>
         {[
           { label:"Total Income", value:yearTotals.income, color:"var(--accent)", icon:"↑", sub:null },
@@ -336,8 +351,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         </div>
       </div>
 
-      <div className={`stagger-card glass-card chart-3d ${styles.chartCard}`} style={{marginTop:14,animationDelay:"400ms",position:"relative",transformStyle:"preserve-3d"}}>
-        <h3 className={styles.chartTitle}>Monthly Detail</h3>
+      <MonthDetailAccordion>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
             <thead>
@@ -371,7 +385,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
             </tbody>
           </table>
         </div>
-      </div>
+      </MonthDetailAccordion>
     </div>
   );
 }

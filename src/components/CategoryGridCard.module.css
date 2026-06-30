@@ -1,0 +1,46 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+  padding: var(--space-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+}
+
+.activeDot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.3;
+}

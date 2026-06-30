@@ -41,7 +41,7 @@
 
 .headerInner {
   margin: 0 auto;
-  padding: 14px 28px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -121,7 +121,7 @@
   border-radius: 16px;
   border: 1px solid var(--border);
   padding: 14px;
-  width: 240px;
+  width: 220px;
   flex-shrink: 0;
   position: sticky;
   top: 80px;
@@ -311,7 +311,7 @@
 
 .incomeCard {
   background: var(--card);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 20px;
   border: 1px solid var(--border);
   backdrop-filter: blur(16px);
@@ -466,7 +466,7 @@
 
 .summaryCard {
   background: var(--card);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   padding: 22px 24px;
   border: 1px solid var(--border);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s, border-color 0.3s;
@@ -476,7 +476,7 @@
 
 .chartCard {
   background: var(--card);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   padding: 24px;
   border: 1px solid var(--border);
   margin-bottom: 14px;
@@ -573,17 +573,18 @@
   }
 
   .tabs {
-    order: 3;           /* drops to row 2 */
-    margin-left: 0;     /* cancel the desktop auto margin */
-    flex-basis: 100%;   /* forces its own row */
-    width: 100%;
+    display: none;
   }
 
-  .tab {
+  .headerInner {
+    padding: 10px 14px;
+    gap: 8px;
+    flex-wrap: nowrap; /* single row */
+  }
+
+  .headerLogo {
     flex: 1;
-    padding: 9px 6px;
-    font-size: 13px;
-    white-space: nowrap;
+    min-width: 0;
   }
 
   .hideOnMobile {
@@ -619,4 +620,90 @@
   .mobileListWrap {
     display: flex;
   }
+}
+
+/* Mobile-only and desktop-only visibility helpers */
+.mobileOnly {
+  display: none;
+}
+
+.desktopOnly {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobileOnly {
+    display: block;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+}
+
+/* Home screen action buttons */
+.homeActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+/* Expenses two-step slide transitions (mobile) */
+.slideFromRight {
+  animation: slideInRight 150ms ease-out;
+}
+
+.slideFromLeft {
+  animation: slideInLeft 150ms ease-out;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* Category grid layout */
+.catGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: var(--space-md);
+}
+
+/* Step 2 sub-header on mobile */
+.expMobileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.expMobileBack {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  color: var(--muted);
+  padding: 8px;
+  border-radius: 10px;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.expMobileCatName {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  flex: 1;
 }
