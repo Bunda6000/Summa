@@ -152,11 +152,11 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
   const planLabel =
     profile?.plan === "paid" ? "Paid" : isTrial ? "Trial" : "Free";
   const statusLabel =
-    profile?.subscription_status === "active"
-      ? "Active"
-      : profile?.subscription_status === "cancelled"
-        ? "Cancelled"
-        : "Past Due";
+    profile?.subscription_status === 'active'
+      ? 'Active'
+      : profile?.subscription_status === 'cancelled'
+      ? 'Cancelled'
+      : 'Past Due';
 
   return (
     <div
@@ -194,7 +194,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                   onClick={handleResend}
                   disabled={authLoading}
                 >
-                  {authLoading ? "Sending…" : "Resend verification email"}
+                  {authLoading ? 'Sending…' : 'Resend verification email'}
                 </button>
               </div>
             )}
@@ -317,9 +317,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
             {/* Plan */}
             <div className={styles.field}>
               <span className={styles.label}>Plan</span>
-              <span
-                className={`${styles.chip} ${profile?.plan === "paid" ? styles.chipPaid : isTrial ? styles.chipTrial : styles.chipFree}`}
-              >
+              <span className={`${styles.chip} ${profile?.plan === 'paid' ? styles.chipPaid : styles.chipFree}`}>
                 {planLabel}
               </span>
             </div>
@@ -390,9 +388,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                     : "Start Free Trial"}
                 </button>
                 {!isEmailVerified && (
-                  <span className={styles.hint}>
-                    Email verification required to start a trial.
-                  </span>
+                  <span className={styles.hint}>Email verification required to purchase a subscription.</span>
                 )}
               </div>
             )}
@@ -431,7 +427,7 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? 'Saving…' : 'Save'}
             </button>
 
             {/* Logout */}

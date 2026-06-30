@@ -1,0 +1,62 @@
+.nav {
+  display: none; /* shown only on mobile via media query in index.css */
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(280px, 85vw, 360px);
+  height: 64px;
+  background: var(--header-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 32px var(--shadow-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  height: 52px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 24px;
+  transition: background 0.2s, color 0.2s;
+  min-width: var(--touch-min);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+.icon {
+  font-size: 20px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
+.active {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+@media (max-width: 768px) {
+  .nav {
+    display: flex;
+  }
+}

@@ -1,0 +1,28 @@
+.wrap {
+  display: flex;
+  background: var(--chip);
+  border-radius: 12px;
+  padding: 3px;
+  margin-bottom: var(--space-md);
+}
+
+.option {
+  flex: 1;
+  height: 38px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  min-height: var(--touch-min);
+}
+
+.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 4px var(--shadow);
+}
