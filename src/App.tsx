@@ -25,6 +25,7 @@ import LockedFeature from './components/subscription/LockedFeature';
 import GracePeriodBanner from './components/billing/GracePeriodBanner';
 import TrialBanner from './components/billing/TrialBanner';
 import PixelModalOverlay from './components/PixelModalOverlay';
+import BottomPillNav from './components/BottomPillNav';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -866,20 +867,7 @@ export default function BudgetApp() {
             )}
         </PixelModalOverlay>
       )}
-      {/* Mobile thumb-zone action bar — only shown on small screens for tabs with add actions */}
-      {(tab === "incomes" || tab === "expenses") && (
-        <div className={styles.mobileActionBar}>
-          {tab === "incomes" && (
-            <>
-              <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Fixed</button>
-              <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Variable</button>
-            </>
-          )}
-          {tab === "expenses" && (
-            <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnPrimary}`} style={{flex:1,touchAction:"manipulation"}}>+ Add Category</button>
-          )}
-        </div>
-      )}
+      <BottomPillNav tab={tab} setTab={(t) => setTab(t as "dashboard" | "expenses" | "incomes" | "budget")} />
 
       <SyncStatusIndicator />
     </div>
