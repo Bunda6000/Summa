@@ -29,6 +29,7 @@ import BottomPillNav from './components/BottomPillNav';
 import HeroMonthCard from './components/HeroMonthCard';
 import UpcomingStrip from './components/UpcomingStrip';
 import CategoryGridCard from './components/CategoryGridCard';
+import SegmentedToggle from './components/SegmentedToggle';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -148,6 +149,9 @@ export default function BudgetApp() {
   useEffect(() => {
     if (tab !== 'expenses') setMobileExpStep('picker');
   }, [tab]);
+
+  // Mobile incomes segmented toggle
+  const [incomeSegment, setIncomeSegment] = useState<'fixed' | 'variable'>('fixed');
 
   return (
     <div className={styles.root}>
@@ -832,6 +836,88 @@ export default function BudgetApp() {
         {/* ═══ INCOMES TAB ═══ */}
         {tab === "incomes" && (
           <div style={{animation:"fadeIn .35s"}}>
+
+            {/* ── Mobile incomes: segmented toggle ── */}
+            <div className={styles.mobileOnly}>
+              <SegmentedToggle
+                options={[{ id: 'fixed', label: 'Fixed' }, { id: 'variable', label: 'Variable' }]}
+                value={incomeSegment}
+                onChange={(id) => setIncomeSegment(id as 'fixed' | 'variable')}
+              />
+
+              {incomeSegment === 'fixed' && (
+                <>
+                  {fixedIncomes.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <div style={{fontSize:32,marginBottom:8,opacity:.5}}>💰</div>
+                      <p style={{fontWeight:500,marginBottom:4}}>No fixed income sources yet</p>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:12}}>
+                      {fixedIncomes.map((src, si) => {
+                        const sorted = [...(src.records||[])].sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom));
+                        const current = sorted.filter(r=>r.effectiveFrom<=mk(getCY(),getCM())).pop();
+                        return (
+                          <div key={src.id} className={`stagger-card card-h ${styles.incomeCard}`} style={{animationDelay:`${si*80}ms`}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                              <div>
+                                <h3 style={{fontSize:16,fontWeight:600,marginBottom:4}}>{src.name}</h3>
+                                {current && (
+                                  <div style={{fontSize:22,fontWeight:700,color:"var(--accent)",fontFamily:"'Space Grotesk',sans-serif"}}>
+                                    {fmt(current.amount)}<span style={{fontSize:13,fontWeight:400,color:"var(--muted)"}}>/mo</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{display:"flex",gap:6}}>
+                                <button onClick={()=>setModal({type:"editFixedIncome",idx:si,src})} className={styles.btnSmall}>Edit</button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button onClick={()=>setModal({type:"addFixedIncome"})} className={`btn-hover ${styles.btnPrimary}`}
+                    style={{width:"100%",touchAction:"manipulation"}}>
+                    + Add Fixed Source
+                  </button>
+                </>
+              )}
+
+              {incomeSegment === 'variable' && (
+                <>
+                  {variableIncomes.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <div style={{fontSize:32,marginBottom:8,opacity:.5}}>📋</div>
+                      <p style={{fontWeight:500,marginBottom:4}}>No variable income recorded yet</p>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                      {[...variableIncomes].sort((a,b)=>b.month.localeCompare(a.month)).map(v => {
+                        const {y,m} = parseMk(v.month);
+                        return (
+                          <div key={v.id} className={`${styles.mobileRow}`}
+                            onClick={()=>setModal({type:"editVarIncome",item:v})}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <span style={{fontWeight:600,fontSize:14}}>{v.name}</span>
+                              <span style={{fontWeight:700,fontSize:16,color:"var(--accent)"}}>{fmt(v.amount)}</span>
+                            </div>
+                            <span style={{fontSize:12,color:"var(--muted)",marginTop:4}}>{MONTHS[m]} {y}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button onClick={()=>setModal({type:"addVarIncome"})} className={`btn-hover ${styles.btnPrimary}`}
+                    style={{width:"100%",touchAction:"manipulation"}}>
+                    + Add Variable Entry
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* ── Desktop incomes (existing, unchanged) ── */}
+            <div className={styles.desktopOnly}>
             {/* Fixed */}
             <section>
               <div className={styles.sectionHead}>
@@ -954,6 +1040,7 @@ export default function BudgetApp() {
                 </>
               )}
             </section>
+            </div>
           </div>
         )}
 
