@@ -41,7 +41,7 @@
 
 .headerInner {
   margin: 0 auto;
-  padding: 14px 28px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -121,7 +121,7 @@
   border-radius: 16px;
   border: 1px solid var(--border);
   padding: 14px;
-  width: 240px;
+  width: 220px;
   flex-shrink: 0;
   position: sticky;
   top: 80px;
@@ -311,7 +311,7 @@
 
 .incomeCard {
   background: var(--card);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 20px;
   border: 1px solid var(--border);
   backdrop-filter: blur(16px);
@@ -466,7 +466,7 @@
 
 .summaryCard {
   background: var(--card);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   padding: 22px 24px;
   border: 1px solid var(--border);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s, border-color 0.3s;
@@ -476,7 +476,7 @@
 
 .chartCard {
   background: var(--card);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   padding: 24px;
   border: 1px solid var(--border);
   margin-bottom: 14px;
