@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SyncStatusIndicator from './components/SyncStatusIndicator';
 import { mk, parseMk, today, fmtDate, getCY, getCM, MIN_YEAR, MONTHS } from './utils/dates';
 import { fmt } from './utils/formatters';
@@ -28,6 +28,7 @@ import PixelModalOverlay from './components/PixelModalOverlay';
 import BottomPillNav from './components/BottomPillNav';
 import HeroMonthCard from './components/HeroMonthCard';
 import UpcomingStrip from './components/UpcomingStrip';
+import CategoryGridCard from './components/CategoryGridCard';
 
 // Recharts — only what BudgetApp uses directly in the dashboard
 import {
@@ -140,6 +141,13 @@ export default function BudgetApp() {
 
   const cat = categories[catIdx] || categories[0];
   const catMaxYear = getCY() + (cat?.maxYears || 5);
+
+  // Mobile expenses two-step flow
+  const [mobileExpStep, setMobileExpStep] = useState<'picker' | 'months'>('picker');
+  const [slideDir, setSlideDir] = useState<'right' | 'left'>('right');
+  useEffect(() => {
+    if (tab !== 'expenses') setMobileExpStep('picker');
+  }, [tab]);
 
   return (
     <div className={styles.root}>
@@ -394,7 +402,130 @@ export default function BudgetApp() {
 
         {/* ═══ EXPENSES TAB ═══ */}
         {tab === "expenses" && (
-          <div className="exp-layout" style={{animation:"fadeIn .35s",display:"flex",gap:20,alignItems:"flex-start"}}>
+          <div style={{animation:"fadeIn .35s"}}>
+
+            {/* ── Mobile two-step flow ── */}
+            <div className={styles.mobileOnly}>
+              {mobileExpStep === 'picker' && (
+                <div key="picker" className={slideDir === 'left' ? styles.slideFromLeft : ''}>
+                  <div className={styles.catGrid}>
+                    {categories.map((c, i) => {
+                      const curKey = mk(getCY(), getCM());
+                      const hasData = !!expenses?.[c.id]?.[curKey];
+                      return (
+                        <CategoryGridCard
+                          key={c.id}
+                          name={c.name}
+                          hasDataThisMonth={hasData}
+                          onPress={() => {
+                            setCatIdx(i);
+                            setExpYear(getCY());
+                            setExpSel(new Set());
+                            setSlideDir('right');
+                            setMobileExpStep('months');
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                  {categories.length === 0 && (
+                    <div className={styles.emptyState}>
+                      <div style={{fontSize:32,marginBottom:8,opacity:.5}}>📂</div>
+                      <p style={{fontWeight:500,marginBottom:4}}>No categories yet</p>
+                      <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnPrimary}`} style={{marginTop:12}}>
+                        Create your first category
+                      </button>
+                    </div>
+                  )}
+                  <button onClick={()=>setModal({type:"addCat"})} className={`btn-hover ${styles.btnGhost}`}
+                    style={{width:"100%",marginTop:8}}>
+                    + Add Category
+                  </button>
+                </div>
+              )}
+
+              {mobileExpStep === 'months' && cat && (
+                <div key="months" className={slideDir === 'right' ? styles.slideFromRight : ''}>
+                  {/* Sub-header */}
+                  <div className={styles.expMobileHeader}>
+                    <button className={styles.expMobileBack}
+                      onClick={() => { setSlideDir('left'); setMobileExpStep('picker'); }}
+                      aria-label="Back to categories">
+                      ‹
+                    </button>
+                    <span className={styles.expMobileCatName}>{cat.name}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <button onClick={() => { if(expYear > 2020) setExpYear(expYear - 1); }}
+                        className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear>2020?1:.3}}>◂</button>
+                      <span className={styles.yearLabel}>{expYear}</span>
+                      <button onClick={() => { if(expYear < catMaxYear-1) setExpYear(expYear + 1); }}
+                        className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
+                    </div>
+                  </div>
+
+                  {/* Month list */}
+                  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                    {MONTHS.map((mName, mi) => {
+                      const key = mk(expYear, mi);
+                      const entry = expenses?.[cat.id]?.[key] || null;
+                      const hasSubs = (cat.subcategories?.length ?? 0) > 0;
+                      const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
+                      const isCurrent = expYear === getCY() && mi === getCM();
+                      const totalAmt = hasSubs
+                        ? (cat.subcategories||[]).reduce((s,sc) => s + (entry?.subAmounts?.[sc.id]||0), 0) || (entry?.amount||0)
+                        : (entry?.amount||0);
+                      const subAmounts = entry?.subAmounts || {};
+                      const subIds = hasSubs ? Object.keys(subAmounts).filter(id => (subAmounts[id]||0) > 0) : [];
+                      const paidCount = subIds.filter(id => entry?.subPaid?.[id]?.paid).length;
+                      const fullyPaid = hasSubs ? (subIds.length > 0 && paidCount === subIds.length) : !!entry?.paid;
+                      const partialPaid = hasSubs && paidCount > 0 && !fullyPaid;
+
+                      let pillText = "+ Add";
+                      let pillColor = "var(--faintest)";
+                      let pillBg = "transparent";
+                      let pillBorder = "1px solid var(--border)";
+                      if (fullyPaid) {
+                        pillText = "Paid"; pillColor = "var(--accent)"; pillBg = "var(--accent-bg)"; pillBorder = "1px solid var(--accent-light)";
+                      } else if (partialPaid) {
+                        pillText = `${paidCount}/${subIds.length} paid`; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                      } else if (totalAmt > 0) {
+                        pillText = "Unpaid"; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+                      }
+
+                      return (
+                        <div key={mi}
+                          className={`stagger-row ${styles.mobileRow} ${isCurrent ? styles.mobileRowCurrent : ''}`}
+                          onClick={() => setModal({type:"editExp",catId:cat.id,catObj:cat,monthKey:key,monthLabel:`${mName} ${expYear}`,entry})}
+                          style={{opacity: isPast && !entry ? 0.45 : 1, animationDelay:`${mi*20}ms`}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{fontWeight:700,fontSize:14,color:isCurrent?"var(--accent)":"var(--text)"}}>{mName}</span>
+                              {isCurrent && <span className={styles.nowBadge}>now</span>}
+                            </div>
+                            <span style={{fontSize:12,fontWeight:600,color:pillColor,background:pillBg,padding:"3px 10px",borderRadius:20,border:pillBorder}}>
+                              {pillText}
+                            </span>
+                          </div>
+                          <div style={{marginTop:6,fontSize:20,fontWeight:700,color:totalAmt>0?"var(--text)":"var(--faint)"}}>
+                            {totalAmt > 0 ? fmt(totalAmt) : "—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className={styles.yearTotal}>
+                    <span style={{color:"var(--muted)"}}>Total for {expYear}:</span>
+                    <span style={{fontWeight:600,fontSize:18,color:"var(--text)"}}>
+                      {fmt(MONTHS.reduce((s,_,mi) => s + (getExp(cat.id, mk(expYear,mi))?.amount||0), 0))}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Desktop layout (existing, unchanged) ── */}
+            <div className={`exp-layout ${styles.desktopOnly}`} style={{display:"flex",gap:20,alignItems:"flex-start"}}>
             {/* Left sidebar — category nav */}
             <div className={`cat-sidebar ${styles.catSidebar}`}>
               <div className={styles.catSidebarHeader}>
@@ -694,6 +825,7 @@ export default function BudgetApp() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         )}
 
