@@ -166,6 +166,21 @@ export default function BudgetApp() {
   // Destructure appData for convenient access (guard against null)
   const { categories = [], expenses = {}, fixedIncomes = [], variableIncomes = [], loanTypes = [], loanPaid = {} } = appData || {};
 
+  // All hooks must be called before any early returns (Rules of Hooks)
+  const isMobile = useIsMobile();
+
+  // Mobile expenses two-step flow
+  const [mobileExpStep, setMobileExpStep] = useState<'picker' | 'months'>('picker');
+  const [slideDir, setSlideDir] = useState<'right' | 'left'>('right');
+  const navToMonths = () => { setSlideDir('right'); setMobileExpStep('months'); };
+  const navToPicker = () => { setSlideDir('left'); setMobileExpStep('picker'); };
+  useEffect(() => {
+    if (tab !== 'expenses') setMobileExpStep('picker');
+  }, [tab]);
+
+  // Mobile incomes segmented toggle
+  const [incomeSegment, setIncomeSegment] = useState<'fixed' | 'variable'>('fixed');
+
   if (!introDone) return (
     <div style={{background:'#0A0A10',minHeight:'100dvh',position:'relative',overflow:'hidden'}}>
       <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -184,21 +199,6 @@ export default function BudgetApp() {
 
   const cat = categories[catIdx] || categories[0];
   const catMaxYear = getCY() + (cat?.maxYears || 5);
-
-  const isMobile = useIsMobile();
-
-  // Mobile expenses two-step flow
-  const [mobileExpStep, setMobileExpStep] = useState<'picker' | 'months'>('picker');
-  const [slideDir, setSlideDir] = useState<'right' | 'left'>('right');
-  // Always call these helpers instead of the raw setters to keep step+direction in sync
-  const navToMonths = () => { setSlideDir('right'); setMobileExpStep('months'); };
-  const navToPicker = () => { setSlideDir('left'); setMobileExpStep('picker'); };
-  useEffect(() => {
-    if (tab !== 'expenses') setMobileExpStep('picker');
-  }, [tab]);
-
-  // Mobile incomes segmented toggle
-  const [incomeSegment, setIncomeSegment] = useState<'fixed' | 'variable'>('fixed');
 
   return (
     <div className={styles.root}>
