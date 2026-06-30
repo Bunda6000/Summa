@@ -573,17 +573,18 @@
   }
 
   .tabs {
-    order: 3;           /* drops to row 2 */
-    margin-left: 0;     /* cancel the desktop auto margin */
-    flex-basis: 100%;   /* forces its own row */
-    width: 100%;
+    display: none;
   }
 
-  .tab {
+  .headerInner {
+    padding: 10px 14px;
+    gap: 8px;
+    flex-wrap: nowrap; /* single row */
+  }
+
+  .headerLogo {
     flex: 1;
-    padding: 9px 6px;
-    font-size: 13px;
-    white-space: nowrap;
+    min-width: 0;
   }
 
   .hideOnMobile {
