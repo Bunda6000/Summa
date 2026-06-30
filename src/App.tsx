@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SyncStatusIndicator from './components/SyncStatusIndicator';
 import { mk, parseMk, today, fmtDate, getCY, getCM, MIN_YEAR, MONTHS } from './utils/dates';
 import { fmt } from './utils/formatters';
@@ -6,6 +6,7 @@ import { reorder } from './utils/expressions';
 import { CHART_COLORS } from './constants';
 import useBudgetStore from './store/useBudgetStore';
 import useUIStore from './store/useUIStore';
+import type { Tab } from './store/useUIStore';
 import useAuthStore from './auth/useAuthStore';
 import AccountModal from './components/account/AccountModal';
 import styles from './App.module.css';
@@ -59,6 +60,47 @@ interface ColDef {
   align?: string;
   bold?: boolean;
   cell: (entry: ExpenseEntry | null, key: string) => React.ReactNode;
+}
+
+function useIsMobile() {
+  const mq = useRef<MediaQueryList | null>(null);
+  const [mobile, setMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    mq.current = window.matchMedia('(max-width: 768px)');
+    return mq.current.matches;
+  });
+  useEffect(() => {
+    if (!mq.current) return;
+    const fn = (e: MediaQueryListEvent) => setMobile(e.matches);
+    mq.current.addEventListener('change', fn);
+    return () => mq.current!.removeEventListener('change', fn);
+  }, []);
+  return mobile;
+}
+
+function getMonthStatus(entry: ExpenseEntry | null, hasSubs: boolean, subcategories: { id: string }[]) {
+  const totalAmt = hasSubs
+    ? (subcategories).reduce((s, sc) => s + (entry?.subAmounts?.[sc.id] || 0), 0) || (entry?.amount || 0)
+    : (entry?.amount || 0);
+  const subAmounts = entry?.subAmounts || {};
+  const subIds = hasSubs ? Object.keys(subAmounts).filter(id => (subAmounts[id] || 0) > 0) : [];
+  const paidCount = subIds.filter(id => entry?.subPaid?.[id]?.paid).length;
+  const fullyPaid = hasSubs ? (subIds.length > 0 && paidCount === subIds.length) : !!entry?.paid;
+  const partialPaid = hasSubs && paidCount > 0 && !fullyPaid;
+
+  let pillText = "+ Add";
+  let pillColor = "var(--faintest)";
+  let pillBg = "transparent";
+  let pillBorder = "1px solid var(--border)";
+  if (fullyPaid) {
+    pillText = "Paid"; pillColor = "var(--accent)"; pillBg = "var(--accent-bg)"; pillBorder = "1px solid var(--accent-light)";
+  } else if (partialPaid) {
+    pillText = `${paidCount}/${subIds.length} paid`; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+  } else if (totalAmt > 0) {
+    pillText = "Unpaid"; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
+  }
+
+  return { totalAmt, subIds, paidCount, fullyPaid, partialPaid, pillText, pillColor, pillBg, pillBorder };
 }
 
 /* ═══════════ MAIN APP ═══════════ */
@@ -143,9 +185,14 @@ export default function BudgetApp() {
   const cat = categories[catIdx] || categories[0];
   const catMaxYear = getCY() + (cat?.maxYears || 5);
 
+  const isMobile = useIsMobile();
+
   // Mobile expenses two-step flow
   const [mobileExpStep, setMobileExpStep] = useState<'picker' | 'months'>('picker');
   const [slideDir, setSlideDir] = useState<'right' | 'left'>('right');
+  // Always call these helpers instead of the raw setters to keep step+direction in sync
+  const navToMonths = () => { setSlideDir('right'); setMobileExpStep('months'); };
+  const navToPicker = () => { setSlideDir('left'); setMobileExpStep('picker'); };
   useEffect(() => {
     if (tab !== 'expenses') setMobileExpStep('picker');
   }, [tab]);
@@ -320,7 +367,7 @@ export default function BudgetApp() {
               </div>
 
               {/* ── Desktop dashboard (unchanged) ── */}
-              <div className={styles.desktopOnly}>
+              {!isMobile && <div className={styles.desktopOnly}>
                 <h2 className={styles.sectionTitle} style={{marginBottom:22}}>{MONTHS[getCM()]} {getCY()} Overview</h2>
 
                 {/* Summary cards */}
@@ -399,7 +446,7 @@ export default function BudgetApp() {
                     )}
                   </div>
                 </div>
-              </div>
+              </div>}
             </div>
           );
         })()}
@@ -425,8 +472,7 @@ export default function BudgetApp() {
                             setCatIdx(i);
                             setExpYear(getCY());
                             setExpSel(new Set());
-                            setSlideDir('right');
-                            setMobileExpStep('months');
+                            navToMonths();
                           }}
                         />
                       );
@@ -453,14 +499,14 @@ export default function BudgetApp() {
                   {/* Sub-header */}
                   <div className={styles.expMobileHeader}>
                     <button className={styles.expMobileBack}
-                      onClick={() => { setSlideDir('left'); setMobileExpStep('picker'); }}
+                      onClick={navToPicker}
                       aria-label="Back to categories">
                       ‹
                     </button>
                     <span className={styles.expMobileCatName}>{cat.name}</span>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <button onClick={() => { if(expYear > 2020) setExpYear(expYear - 1); }}
-                        className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear>2020?1:.3}}>◂</button>
+                      <button onClick={() => { if(expYear > MIN_YEAR) setExpYear(expYear - 1); }}
+                        className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear>MIN_YEAR?1:.3}}>◂</button>
                       <span className={styles.yearLabel}>{expYear}</span>
                       <button onClick={() => { if(expYear < catMaxYear-1) setExpYear(expYear + 1); }}
                         className={`year-btn-h ${styles.yearBtn}`} style={{opacity:expYear<catMaxYear-1?1:.3}}>▸</button>
@@ -475,26 +521,8 @@ export default function BudgetApp() {
                       const hasSubs = (cat.subcategories?.length ?? 0) > 0;
                       const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
                       const isCurrent = expYear === getCY() && mi === getCM();
-                      const totalAmt = hasSubs
-                        ? (cat.subcategories||[]).reduce((s,sc) => s + (entry?.subAmounts?.[sc.id]||0), 0) || (entry?.amount||0)
-                        : (entry?.amount||0);
-                      const subAmounts = entry?.subAmounts || {};
-                      const subIds = hasSubs ? Object.keys(subAmounts).filter(id => (subAmounts[id]||0) > 0) : [];
-                      const paidCount = subIds.filter(id => entry?.subPaid?.[id]?.paid).length;
-                      const fullyPaid = hasSubs ? (subIds.length > 0 && paidCount === subIds.length) : !!entry?.paid;
-                      const partialPaid = hasSubs && paidCount > 0 && !fullyPaid;
-
-                      let pillText = "+ Add";
-                      let pillColor = "var(--faintest)";
-                      let pillBg = "transparent";
-                      let pillBorder = "1px solid var(--border)";
-                      if (fullyPaid) {
-                        pillText = "Paid"; pillColor = "var(--accent)"; pillBg = "var(--accent-bg)"; pillBorder = "1px solid var(--accent-light)";
-                      } else if (partialPaid) {
-                        pillText = `${paidCount}/${subIds.length} paid`; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
-                      } else if (totalAmt > 0) {
-                        pillText = "Unpaid"; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
-                      }
+                      const { totalAmt, subIds, paidCount, fullyPaid, partialPaid, pillText, pillColor, pillBg, pillBorder } =
+                        getMonthStatus(entry, hasSubs, cat.subcategories || []);
 
                       return (
                         <div key={mi}
@@ -706,26 +734,8 @@ export default function BudgetApp() {
                           const entry = expenses?.[cat.id]?.[key] || null;
                           const isPast = expYear < getCY() || (expYear === getCY() && mi < getCM());
                           const isCurrent = expYear === getCY() && mi === getCM();
-                          const totalAmt = hasSubs
-                            ? (cat.subcategories||[]).reduce((s,sc) => s + (entry?.subAmounts?.[sc.id]||0), 0) || (entry?.amount||0)
-                            : (entry?.amount||0);
-                          const subAmounts = entry?.subAmounts || {};
-                          const subIds = hasSubs ? Object.keys(subAmounts).filter(id => (subAmounts[id]||0) > 0) : [];
-                          const paidCount = subIds.filter(id => entry?.subPaid?.[id]?.paid).length;
-                          const fullyPaid = hasSubs ? (subIds.length > 0 && paidCount === subIds.length) : !!entry?.paid;
-                          const partialPaid = hasSubs && paidCount > 0 && !fullyPaid;
-
-                          let pillText = "+ Add";
-                          let pillColor = "var(--faintest)";
-                          let pillBg = "transparent";
-                          let pillBorder = "1px solid var(--border)";
-                          if (fullyPaid) {
-                            pillText = "Paid"; pillColor = "var(--accent)"; pillBg = "var(--accent-bg)"; pillBorder = "1px solid var(--accent-light)";
-                          } else if (partialPaid) {
-                            pillText = `${paidCount}/${subIds.length} paid`; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
-                          } else if (totalAmt > 0) {
-                            pillText = "Unpaid"; pillColor = "var(--amber,#C8850A)"; pillBg = "color-mix(in srgb,var(--amber,#C8850A) 10%,transparent)"; pillBorder = "1px solid color-mix(in srgb,var(--amber,#C8850A) 25%,transparent)";
-                          }
+                          const { totalAmt, subIds, paidCount, fullyPaid, partialPaid, pillText, pillColor, pillBg, pillBorder } =
+                            getMonthStatus(entry, hasSubs, cat.subcategories || []);
 
                           return (
                             <div key={mi}
@@ -1130,7 +1140,10 @@ export default function BudgetApp() {
             )}
         </PixelModalOverlay>
       )}
-      <BottomPillNav tab={tab} setTab={(t) => setTab(t as "dashboard" | "expenses" | "incomes" | "budget")} />
+      <BottomPillNav tab={tab} setTab={(t) => {
+        if (t === 'expenses') setMobileExpStep('picker');
+        setTab(t as Tab);
+      }} />
 
       <SyncStatusIndicator />
     </div>

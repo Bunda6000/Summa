@@ -1,6 +1,5 @@
 import styles from './BottomPillNav.module.css';
-
-type Tab = 'dashboard' | 'expenses' | 'incomes' | 'budget';
+import type { Tab } from '../store/useUIStore';
 
 const NAV_ITEMS: { id: Tab; icon: string; label: string }[] = [
   { id: 'dashboard', icon: '⌂', label: 'Home' },

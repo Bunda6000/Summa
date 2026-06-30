@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, CSSProperties } from 'react';
 import styles from './MonthDetailAccordion.module.css';
 
 interface MonthDetailAccordionProps {
   children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
 }
 
-export default function MonthDetailAccordion({ children }: MonthDetailAccordionProps) {
+export default function MonthDetailAccordion({ children, className, style }: MonthDetailAccordionProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={styles.wrap}>
+    <div className={`${styles.wrap}${className ? ` ${className}` : ''}`} style={style}>
       <button
         className={styles.toggle}
         onClick={() => setOpen((prev) => !prev)}

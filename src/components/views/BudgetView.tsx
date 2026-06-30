@@ -351,7 +351,7 @@ export default function BudgetView({ year, setYear, categories, expenses, getFix
         </div>
       </div>
 
-      <MonthDetailAccordion>
+      <MonthDetailAccordion className="stagger-card glass-card chart-3d" style={{marginTop:14,animationDelay:"400ms",position:"relative",transformStyle:"preserve-3d"}}>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
             <thead>
