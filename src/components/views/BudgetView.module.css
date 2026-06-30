@@ -157,3 +157,55 @@
     border-radius: 14px;
   }
 }
+
+/* Mobile metric chips strip */
+.metricChips {
+  display: none;
+}
+
+.metricChip {
+  flex: 1;
+  min-width: 100px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metricChipLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.metricChipValue {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.3px;
+}
+
+/* Hide desktop summary cards on mobile */
+@media (max-width: 768px) {
+  .metricChips {
+    display: flex;
+    gap: var(--space-sm);
+    overflow-x: auto;
+    margin-bottom: var(--space-md);
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .metricChips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .summaryGrid {
+    display: none !important;
+  }
+}

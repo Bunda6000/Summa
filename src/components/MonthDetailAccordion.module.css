@@ -1,0 +1,40 @@
+.wrap {
+  margin-top: var(--space-sm);
+}
+
+.toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px var(--space-md);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: var(--touch-min);
+  transition: border-color 0.2s;
+}
+
+.toggle:active {
+  opacity: 0.8;
+}
+
+.chevron {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+
+.content {
+  margin-top: 8px;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card);
+  animation: fadeIn 0.2s;
+}
