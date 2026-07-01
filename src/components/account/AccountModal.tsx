@@ -1,16 +1,5 @@
-import {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  type ChangeEvent,
-} from "react";
-import {
-  animatePixelsFromPoint,
-  getLastButtonRect,
-  prefersReducedMotion,
-  isMobile,
-} from "../../lib/pixelAnimation";
+import { useState, useEffect, type ChangeEvent } from "react";
+import PixelModalOverlay from "../PixelModalOverlay";
 import useProfileStore from "../../profile/useProfileStore";
 import useAuthStore from "../../auth/useAuthStore";
 import useBillingStore from "../../store/useBillingStore";
@@ -29,34 +18,18 @@ interface Props {
   onOpenBilling?: () => void;
 }
 
+function getInitials(name: string, email: string): string {
+  const trimmedName = name.trim();
+  if (trimmedName) {
+    const parts = trimmedName.split(/\s+/);
+    return parts.length > 1
+      ? (parts[0][0] + parts[1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+  }
+  return email ? email[0].toUpperCase() : "?";
+}
+
 export default function AccountModal({ onClose, onOpenBilling }: Props) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const triggerRect = getLastButtonRect();
-    if (!triggerRect || prefersReducedMotion()) return;
-    const rafId = requestAnimationFrame(() => {
-      if (!cardRef.current) return;
-      const card = cardRef.current;
-      const rect = card.getBoundingClientRect();
-      card.style.opacity = "0";
-      const container = document.createElement("div");
-      container.style.cssText =
-        "position:fixed;inset:0;pointer-events:none;z-index:9997;";
-      document.body.appendChild(container);
-      const cx = triggerRect.left + triggerRect.width / 2;
-      const cy = triggerRect.top + triggerRect.height / 2;
-      animatePixelsFromPoint(cx, cy, rect, container).then(() => {
-        document.body.removeChild(container);
-        if (cardRef.current) {
-          cardRef.current.style.transition = "opacity 0.1s";
-          cardRef.current.style.opacity = "1";
-        }
-      });
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
   const {
     session,
     signOut,
@@ -79,6 +52,8 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
     openManageSubscription,
     clearError,
   } = useBillingStore();
+  const dark = useBudgetStore((state) => state.dark);
+  const toggleDark = useBudgetStore((state) => state.toggleDark);
 
   const userId = session?.user.id ?? "";
   const email = session?.user.email ?? "";
@@ -86,10 +61,11 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
 
   const [emailInput, setEmailInput] = useState(email);
   const [displayName, setDisplayName] = useState("");
+  const [editingField, setEditingField] = useState<"email" | "name" | null>(
+    null,
+  );
   const [migrateLegacy, setMigrateLegacy] = useState<AppData | null>(null);
   const [showMigrationPanel, setShowMigrationPanel] = useState(false);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -110,16 +86,31 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
     if (emailSuccess || emailError) clearEmailStatus();
   };
 
+  const openEditEmail = () => {
+    setEmailInput(email);
+    if (emailSuccess || emailError) clearEmailStatus();
+    setEditingField("email");
+  };
+
+  const openEditName = () => setEditingField("name");
+
+  const cancelEdit = () => {
+    setEditingField(null);
+    setEmailInput(email);
+    if (profile?.display_name) setDisplayName(profile.display_name);
+    if (emailSuccess || emailError) clearEmailStatus();
+  };
+
   const handleUpdateEmail = async () => {
     const trimmed = emailInput.trim();
     if (!trimmed || trimmed === email) return;
     await updateEmail(trimmed);
   };
 
-  const handleSave = async () => {
+  const handleSaveName = async () => {
     if (!userId) return;
     await updateDisplayName(userId, displayName);
-    if (!useProfileStore.getState().error) onClose();
+    if (!useProfileStore.getState().error) setEditingField(null);
   };
 
   const handleResend = async () => {
@@ -151,23 +142,38 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
 
   const planLabel =
     profile?.plan === "paid" ? "Paid" : isTrial ? "Trial" : "Free";
+  const isActivePlan = profile?.plan === "paid" || isTrial;
   const statusLabel =
-    profile?.subscription_status === 'active'
-      ? 'Active'
-      : profile?.subscription_status === 'cancelled'
-      ? 'Cancelled'
-      : 'Past Due';
+    profile?.subscription_status === "active"
+      ? "Active"
+      : profile?.subscription_status === "cancelled"
+        ? "Cancelled"
+        : "Past Due";
+
+  const initials = getInitials(displayName, email);
 
   return (
-    <div
-      className={styles.overlay}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Account"
+    <PixelModalOverlay
+      onClose={onClose}
+      overlayClass={`overlay-mobile ${styles.overlay}`}
+      innerClass="modal-mobile"
     >
-      <div ref={cardRef} className={styles.card}>
+      <div className={styles.card} role="dialog" aria-modal="true" aria-label="Account">
         <div className={styles.header}>
-          <h2 className={styles.title}>Account</h2>
+          <div className={styles.avatar} aria-hidden="true">
+            {initials}
+          </div>
+          <div className={styles.headerText}>
+            <h2 className={styles.name}>{displayName || "Account"}</h2>
+            <div className={styles.emailRow}>
+              <span className={styles.emailText}>{email}</span>
+              {isEmailVerified ? (
+                <span className={styles.verifiedTag}>✓ Verified</span>
+              ) : (
+                <span className={styles.unverifiedTag}>Unverified</span>
+              )}
+            </div>
+          </div>
           <button
             className={styles.closeBtn}
             onClick={onClose}
@@ -194,167 +200,52 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                   onClick={handleResend}
                   disabled={authLoading}
                 >
-                  {authLoading ? 'Sending…' : 'Resend verification email'}
+                  {authLoading ? "Sending…" : "Resend verification email"}
                 </button>
               </div>
-            )}
-
-            {/* Email — editable */}
-            <div className={styles.field}>
-              <label htmlFor="email" className={styles.label}>
-                Email
-              </label>
-              <input
-                id="email"
-                aria-label="Email"
-                type="email"
-                value={emailInput}
-                onChange={handleEmailChange}
-                className={styles.input}
-                disabled={authLoading}
-              />
-              <span className={styles.hint}>
-                A confirmation email will be sent to verify the new address.
-              </span>
-              {emailSuccess && (
-                <p className={styles.successMsg}>{emailSuccess}</p>
-              )}
-              {emailError && <p className={styles.verifyError}>{emailError}</p>}
-              <button
-                className={styles.updateEmailBtn}
-                onClick={handleUpdateEmail}
-                disabled={
-                  authLoading ||
-                  !emailInput.trim() ||
-                  emailInput.trim() === email
-                }
-              >
-                {authLoading ? "Updating…" : "Update Email"}
-              </button>
-            </div>
-
-            {/* Display name — editable */}
-            <div className={styles.field}>
-              <label htmlFor="display-name" className={styles.label}>
-                Display name
-              </label>
-              <input
-                id="display-name"
-                aria-label="Display name"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className={styles.input}
-                disabled={saving}
-              />
-            </div>
-
-            {migrateLegacy && !showMigrationPanel && (
-              <section
-                style={{
-                  marginTop: 24,
-                  paddingTop: 20,
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "var(--text2)",
-                    marginBottom: 6,
-                  }}
-                >
-                  Offline Data
-                </h3>
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    marginBottom: 12,
-                  }}
-                >
-                  You have local data that hasn't been imported yet.
-                </p>
-                <button
-                  onClick={() => setShowMigrationPanel(true)}
-                  style={{
-                    fontSize: 13,
-                    color: "var(--accent)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  Migrate offline data →
-                </button>
-              </section>
-            )}
-            {migrateLegacy && showMigrationPanel && (
-              <section
-                style={{
-                  marginTop: 24,
-                  paddingTop: 20,
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <MigrationPanel
-                  userId={userId}
-                  legacyData={migrateLegacy}
-                  onComplete={async () => {
-                    setMigrateLegacy(null);
-                    setShowMigrationPanel(false);
-                    useBudgetStore.getState().resetStore();
-                    if (userId)
-                      await useBudgetStore.getState().initStore(userId);
-                  }}
-                  onSkip={() => setShowMigrationPanel(false)}
-                />
-              </section>
             )}
 
             {/* Plan */}
-            <div className={styles.field}>
-              <span className={styles.label}>Plan</span>
-              <span className={`${styles.chip} ${profile?.plan === 'paid' ? styles.chipPaid : styles.chipFree}`}>
-                {planLabel}
-              </span>
-            </div>
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Plan</h3>
+              <div
+                className={`${styles.planCard} ${isActivePlan ? styles.planCardActive : ""}`}
+              >
+                <div className={styles.planCardTop}>
+                  <span
+                    className={`${styles.chip} ${profile?.plan === "paid" || isTrial ? styles.chipPaid : styles.chipFree}`}
+                  >
+                    {planLabel}
+                  </span>
+                  {profile?.plan === "paid" && (
+                    <button
+                      className={styles.editToggleBtn}
+                      onClick={handleManageSubscription}
+                    >
+                      Manage
+                    </button>
+                  )}
+                </div>
 
-            {/* Trial dates — only shown during active trial */}
-            {isTrial && (
-              <>
-                {trialStartedAt && (
-                  <div className={styles.field}>
-                    <span className={styles.label}>Trial started</span>
-                    <span className={styles.value}>
-                      {fmtDate(trialStartedAt)}
-                    </span>
-                  </div>
+                {isTrial && trialStartedAt && (
+                  <span className={styles.planMeta}>
+                    Trial started {fmtDate(trialStartedAt)}
+                  </span>
                 )}
-                {trialEndsAt && (
-                  <div className={styles.field}>
-                    <span className={styles.label}>Trial ends</span>
-                    <span className={styles.value}>{fmtDate(trialEndsAt)}</span>
-                  </div>
+                {isTrial && trialEndsAt && (
+                  <span className={styles.planMeta}>
+                    Trial ends {fmtDate(trialEndsAt)}
+                  </span>
                 )}
-              </>
-            )}
-
-            {/* Subscription status — only for non-trial users */}
-            {!isTrial && (
-              <div className={styles.field}>
-                <span className={styles.label}>Subscription status</span>
-                <span className={styles.value}>{statusLabel}</span>
+                {!isTrial && profile?.plan === "paid" && (
+                  <span className={styles.planMeta}>{statusLabel}</span>
+                )}
               </div>
-            )}
 
-            {/* Trial: Subscribe Now to convert before trial ends */}
-            {isTrial && (
-              <div className={styles.field}>
+              {isTrial && (
                 <button
-                  className={styles.upgradeBtn}
+                  className={styles.btnPrimary}
+                  style={{ width: "100%" }}
                   onClick={handleUpgrade}
                   disabled={!isEmailVerified || billingStatus === "purchasing"}
                   title={
@@ -367,75 +258,209 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
                     ? "Processing…"
                     : "Subscribe Now"}
                 </button>
-              </div>
-            )}
+              )}
 
-            {/* Upgrade — guarded by email verification and billing state */}
-            {profile?.plan === "free" && !isTrial && (
+              {profile?.plan === "free" && !isTrial && (
+                <>
+                  <button
+                    className={styles.btnPrimary}
+                    style={{ width: "100%" }}
+                    onClick={handleUpgrade}
+                    disabled={!isEmailVerified || billingStatus === "purchasing"}
+                    title={
+                      !isEmailVerified
+                        ? "Verify your email to upgrade"
+                        : undefined
+                    }
+                  >
+                    {billingStatus === "purchasing"
+                      ? "Processing…"
+                      : "Start Free Trial"}
+                  </button>
+                  {!isEmailVerified && (
+                    <span className={styles.hint}>
+                      Email verification required to purchase a subscription.
+                    </span>
+                  )}
+                </>
+              )}
+
+              {billingError && <p className={styles.errorMsg}>{billingError}</p>}
+            </div>
+
+            {/* Account fields */}
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Account</h3>
+
+              {editingField === "email" ? (
+                <div className={styles.editBlock}>
+                  <label htmlFor="email" className={styles.label}>
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    aria-label="Email"
+                    type="email"
+                    value={emailInput}
+                    onChange={handleEmailChange}
+                    className={styles.input}
+                    disabled={authLoading}
+                    autoFocus
+                  />
+                  <span className={styles.hint}>
+                    A confirmation email will be sent to verify the new address.
+                  </span>
+                  {emailSuccess && (
+                    <p className={styles.successMsg}>{emailSuccess}</p>
+                  )}
+                  {emailError && <p className={styles.verifyError}>{emailError}</p>}
+                  <div className={styles.editActions}>
+                    <button className={styles.btnGhost} onClick={cancelEdit}>
+                      Cancel
+                    </button>
+                    <button
+                      className={styles.btnPrimary}
+                      onClick={handleUpdateEmail}
+                      disabled={
+                        authLoading ||
+                        !emailInput.trim() ||
+                        emailInput.trim() === email
+                      }
+                    >
+                      {authLoading ? "Updating…" : "Update"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.field}>
+                  <div className={styles.fieldMain}>
+                    <span className={styles.label}>Email</span>
+                    <span className={styles.value}>{email}</span>
+                  </div>
+                  <button className={styles.editToggleBtn} onClick={openEditEmail}>
+                    Edit
+                  </button>
+                </div>
+              )}
+
+              {editingField === "name" ? (
+                <div className={styles.editBlock}>
+                  <label htmlFor="display-name" className={styles.label}>
+                    Display name
+                  </label>
+                  <input
+                    id="display-name"
+                    aria-label="Display name"
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className={styles.input}
+                    disabled={saving}
+                    autoFocus
+                  />
+                  {error && <p className={styles.errorMsg}>{error}</p>}
+                  <div className={styles.editActions}>
+                    <button className={styles.btnGhost} onClick={cancelEdit}>
+                      Cancel
+                    </button>
+                    <button
+                      className={styles.btnPrimary}
+                      onClick={handleSaveName}
+                      disabled={saving}
+                    >
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.field}>
+                  <div className={styles.fieldMain}>
+                    <span className={styles.label}>Display name</span>
+                    <span className={styles.value}>{displayName || "—"}</span>
+                  </div>
+                  <button className={styles.editToggleBtn} onClick={openEditName}>
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Preferences */}
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Preferences</h3>
               <div className={styles.field}>
+                <div className={styles.fieldMain}>
+                  <span className={styles.label}>Appearance</span>
+                  <span className={styles.value}>{dark ? "Dark" : "Light"}</span>
+                </div>
                 <button
-                  className={styles.upgradeBtn}
-                  onClick={handleUpgrade}
-                  disabled={!isEmailVerified || billingStatus === "purchasing"}
-                  title={
-                    !isEmailVerified
-                      ? "Verify your email to upgrade"
-                      : undefined
-                  }
+                  className={styles.themeToggleBtn}
+                  onClick={toggleDark}
+                  style={{ transform: dark ? "rotate(180deg)" : "rotate(0deg)" }}
+                  aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+                  title={dark ? "Light mode" : "Dark mode"}
                 >
-                  {billingStatus === "purchasing"
-                    ? "Processing…"
-                    : "Start Free Trial"}
+                  {dark ? "☀" : "☾"}
                 </button>
-                {!isEmailVerified && (
-                  <span className={styles.hint}>Email verification required to purchase a subscription.</span>
+              </div>
+            </div>
+
+            {/* Offline data migration */}
+            {migrateLegacy && (
+              <div className={styles.section}>
+                <hr className={styles.divider} />
+                <h3 className={styles.sectionTitle}>Offline Data</h3>
+                {!showMigrationPanel ? (
+                  <div className={styles.field}>
+                    <div className={styles.fieldMain}>
+                      <span className={styles.value}>
+                        Local data hasn't been imported yet.
+                      </span>
+                    </div>
+                    <button
+                      className={styles.editToggleBtn}
+                      onClick={() => setShowMigrationPanel(true)}
+                    >
+                      Migrate →
+                    </button>
+                  </div>
+                ) : (
+                  <MigrationPanel
+                    userId={userId}
+                    legacyData={migrateLegacy}
+                    onComplete={async () => {
+                      setMigrateLegacy(null);
+                      setShowMigrationPanel(false);
+                      useBudgetStore.getState().resetStore();
+                      if (userId)
+                        await useBudgetStore.getState().initStore(userId);
+                    }}
+                    onSkip={() => setShowMigrationPanel(false)}
+                  />
                 )}
               </div>
             )}
 
-            {/* Manage Subscription — only shown for paid users */}
-            {profile?.plan === "paid" && (
-              <div className={styles.field}>
-                <button
-                  className={styles.manageSubBtn}
-                  onClick={handleManageSubscription}
-                >
-                  Manage Subscription
+            {/* Billing & support actions */}
+            <div className={styles.actionsRow}>
+              {onOpenBilling && (
+                <button className={styles.btnGhost} onClick={onOpenBilling}>
+                  Billing & Receipts
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Billing & Receipts — available to all users */}
-            {onOpenBilling && (
-              <div className={styles.field}>
-                <button className={styles.manageSubBtn} onClick={onOpenBilling}>
-                  Billing &amp; Receipts
-                </button>
-              </div>
-            )}
-
-            {/* Billing error / cancellation message */}
-            {billingError && <p className={styles.errorMsg}>{billingError}</p>}
-
-            {/* Billing support — inline CTA near billing info */}
             <SupportPanel variant="billing" />
 
-            {error && <p className={styles.errorMsg}>{error}</p>}
+            <hr className={styles.divider} />
 
-            <button
-              className={styles.saveBtn}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
+            {/* Log out / delete */}
+            <div className={styles.actionsRow}>
+              <button className={styles.btnGhost} onClick={signOut}>
+                Log Out
+              </button>
+            </div>
 
-            {/* Logout */}
-            <button className={styles.logoutBtn} onClick={signOut}>
-              Log Out
-            </button>
-
-            {/* Delete account — danger zone */}
             <div className={styles.dangerZone}>
               <button
                 className={styles.deleteBtn}
@@ -447,19 +472,14 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
               >
                 {authLoading ? "Deleting…" : "Delete Account"}
               </button>
-              {deleteError && (
-                <p className={styles.errorMsg} style={{ marginTop: 10 }}>
-                  {deleteError}
-                </p>
-              )}
+              {deleteError && <p className={styles.errorMsg}>{deleteError}</p>}
             </div>
 
-            {/* General support section */}
             <hr className={styles.divider} />
-            <p className={styles.sectionLabel}>Support</p>
+
+            <p className={styles.sectionTitle}>Support</p>
             <SupportPanel />
 
-            {/* Legal links */}
             <p className={styles.legalText}>
               <a
                 href={LEGAL_URLS.privacy}
@@ -483,34 +503,6 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
         )}
       </div>
 
-      {cancelDialogOpen && (
-        <ConfirmDialog
-          title="Cancel Subscription?"
-          message="Your subscription will remain active until the end of the billing period. To cancel, you'll be taken to Google Play."
-          confirmLabel="Go to Google Play"
-          cancelLabel="Keep Subscription"
-          onConfirm={async () => {
-            setCancelDialogOpen(false);
-            await openManageSubscription();
-          }}
-          onCancel={() => setCancelDialogOpen(false)}
-        />
-      )}
-
-      {downgradeDialogOpen && (
-        <ConfirmDialog
-          title="Change Plan?"
-          message="To change your plan, you'll be taken to Google Play."
-          confirmLabel="Go to Google Play"
-          cancelLabel="Keep Plan"
-          onConfirm={async () => {
-            setDowngradeDialogOpen(false);
-            await openManageSubscription();
-          }}
-          onCancel={() => setDowngradeDialogOpen(false)}
-        />
-      )}
-
       {deleteDialogOpen && (
         <ConfirmDialog
           title="Delete Account?"
@@ -529,6 +521,6 @@ export default function AccountModal({ onClose, onOpenBilling }: Props) {
           onCancel={() => setDeleteDialogOpen(false)}
         />
       )}
-    </div>
+    </PixelModalOverlay>
   );
 }

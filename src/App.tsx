@@ -106,14 +106,12 @@ function getMonthStatus(entry: ExpenseEntry | null, hasSubs: boolean, subcategor
 /* ═══════════ MAIN APP ═══════════ */
 export default function BudgetApp() {
   // Auth
-  const signOut = useAuthStore(state => state.signOut);
   const userId = useAuthStore(state => state.session?.user.id ?? '');
   const [showAccount, setShowAccount] = useState(false);
 
   // Budget data from store
   const appData = useBudgetStore(state => state.appData);
   const dark = useBudgetStore(state => state.dark);
-  const toggleDark = useBudgetStore(state => state.toggleDark);
 
   // Budget actions
   const setExp = useBudgetStore(state => state.setExp);
@@ -227,17 +225,9 @@ export default function BudgetApp() {
 
           {/* Utility buttons — row 1 col 2 on mobile */}
           <div className={styles.headerUtils}>
-            <button onClick={toggleDark} title={dark?"Light mode":"Dark mode"}
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 12px",cursor:"pointer",fontSize:18,lineHeight:1,transition:"all .35s cubic-bezier(.22,1,.36,1)",minWidth:44,minHeight:44,display:"flex",alignItems:"center",justifyContent:"center",transform:dark?"rotate(180deg)":"rotate(0deg)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",touchAction:"manipulation"}}>
-              {dark ? "☀" : "☾"}
-            </button>
             <button onClick={() => setShowAccount(true)} title="Account"
               style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
               Account
-            </button>
-            <button onClick={signOut} title="Logout"
-              style={{background:"var(--chip)",border:"1px solid var(--border)",borderRadius:12,padding:"9px 14px",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--muted)",lineHeight:1,transition:"all .2s",minHeight:42,display:"flex",alignItems:"center",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
-              Logout
             </button>
           </div>
         </div>
