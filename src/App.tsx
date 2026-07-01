@@ -257,59 +257,83 @@ export default function BudgetApp() {
             miniData.push({ month: MONTHS[mm], income: inc, paid: pd, balance: inc - pd });
           }
 
-          /* Upcoming unpaid expenses (this month + next 3) */
+          /* Upcoming unpaid: earliest unpaid item per line (category / subcategory / loan),
+             shown only once its due month has arrived (month <= current month). A line whose
+             only unpaid entry lies in a future month is omitted entirely until that month arrives. */
+          const monthLabel = (k: string) => { const { y, m } = parseMk(k); return `${MONTHS[m]} ${y}`; };
           const upcoming: {cat:string;sub:string|null;amount:number;month:string;label:string}[] = [];
-          for (let i = 0; i < 4; i++) {
-            let mm = getCM() + i, yy = getCY();
-            while (mm > 11) { mm -= 12; yy++; }
-            const k = mk(yy, mm);
-            categories.forEach(c => {
-              if (c.id === "loans") {
-                loanTypes.forEach(lt => {
+          categories.forEach(c => {
+            if (c.id === "loans") {
+              loanTypes.forEach(lt => {
+                if (!lt.startFrom) return;
+                const endKey = lt.endAt && lt.endAt < curKey ? lt.endAt : curKey;
+                let { y: yy, m: mm } = parseMk(lt.startFrom);
+                let k = mk(yy, mm);
+                while (k <= endKey) {
                   const amt = getLoanAmountForMonth(lt, k);
-                  if (amt > 0 && !loanPaid[lt.id]?.[k]?.paid)
-                    upcoming.push({ cat: c.name, sub: lt.name, amount: amt, month: k, label: `${MONTHS[mm]} ${yy}` });
-                });
-              } else {
-                const e = expenses?.[c.id]?.[k];
+                  if (amt > 0 && !loanPaid[lt.id]?.[k]?.paid) {
+                    upcoming.push({ cat: c.name, sub: lt.name, amount: amt, month: k, label: monthLabel(k) });
+                    break;
+                  }
+                  mm++; if (mm > 11) { mm = 0; yy++; }
+                  k = mk(yy, mm);
+                }
+              });
+            } else {
+              const catExpenses = expenses?.[c.id] || {};
+              const monthKeys = Object.keys(catExpenses).filter(k => k <= curKey).sort();
+              const earliestByLine: Record<string, { month: string; amount: number; subName: string | null }> = {};
+              monthKeys.forEach(k => {
+                const e = catExpenses[k];
                 if (!e) return;
                 if (e.subPaid && Object.keys(e.subAmounts || {}).length > 0) {
                   Object.entries(e.subAmounts).forEach(([scId, amt]) => {
-                    if (amt > 0 && !e.subPaid?.[scId]?.paid) {
+                    if (amt > 0 && !e.subPaid?.[scId]?.paid && !earliestByLine[scId]) {
                       const scName = (c.subcategories||[]).find(s=>s.id===scId)?.name || "Sub";
-                      upcoming.push({ cat: c.name, sub: scName, amount: amt, month: k, label: `${MONTHS[mm]} ${yy}` });
+                      earliestByLine[scId] = { month: k, amount: amt, subName: scName };
                     }
                   });
-                } else if (!e.paid) {
-                  upcoming.push({ cat: c.name, sub: null, amount: e.amount, month: k, label: `${MONTHS[mm]} ${yy}` });
+                } else if (!e.paid && e.amount > 0 && !earliestByLine.__main__) {
+                  earliestByLine.__main__ = { month: k, amount: e.amount, subName: null };
                 }
-              }
-            });
-          }
+              });
+              Object.values(earliestByLine).forEach(line => {
+                upcoming.push({ cat: c.name, sub: line.subName, amount: line.amount, month: line.month, label: monthLabel(line.month) });
+              });
+            }
+          });
+          upcoming.sort((a, b) => a.month.localeCompare(b.month));
 
-          /* Recent payments (last 10 paid items by paidDate) */
+          /* Recent payments: latest paid item per line (category / subcategory / loan),
+             newest first. At most one item per line — never multiple payments for the same line. */
           const recent: {cat:string;sub:string|null;amount:number;paidDate:string}[] = [];
           categories.forEach(c => {
             if (c.id === "loans") {
               loanTypes.forEach(lt => {
-                Object.entries(loanPaid[lt.id] || {}).forEach(([entryKey, pd]) => {
-                  if (pd?.paid && pd.paidDate)
-                    recent.push({ cat: c.name, sub: lt.name, amount: getLoanAmountForMonth(lt, entryKey), paidDate: pd.paidDate });
-                });
+                const paidEntries = Object.entries(loanPaid[lt.id] || {}).filter(([, pd]) => pd?.paid && pd.paidDate);
+                if (paidEntries.length === 0) return;
+                const [entryKey, pd] = paidEntries.reduce((a, b) => (a[1].paidDate > b[1].paidDate ? a : b));
+                recent.push({ cat: c.name, sub: lt.name, amount: getLoanAmountForMonth(lt, entryKey), paidDate: pd.paidDate });
               });
             } else {
-              Object.entries(expenses?.[c.id] || {}).forEach(([, e]) => {
-                if (e?.subPaid && Object.keys(e.subPaid).length > 0) {
-                  Object.entries(e.subPaid).forEach(([scId, sp]) => {
-                    if (sp?.paid && sp.paidDate) {
-                      const scName = (c.subcategories||[]).find(s=>s.id===scId)?.name || "Sub";
-                      recent.push({ cat: c.name, sub: scName, amount: e.subAmounts?.[scId] || 0, paidDate: sp.paidDate });
-                    }
-                  });
-                } else if (e?.paid && e.paidDate) {
-                  recent.push({ cat: c.name, sub: null, amount: e.amount, paidDate: e.paidDate });
-                }
+              const catExpenses = expenses?.[c.id] || {};
+              const isSubcategorized = (e: ExpenseEntry) => e?.subPaid && Object.keys(e.subPaid).length > 0;
+              const mainEntries = Object.values(catExpenses).filter(e => !isSubcategorized(e) && e?.paid && e.paidDate);
+              if (mainEntries.length > 0) {
+                const latestMain = mainEntries.reduce((a, b) => (a.paidDate > b.paidDate ? a : b));
+                recent.push({ cat: c.name, sub: null, amount: latestMain.amount, paidDate: latestMain.paidDate });
+              }
+              const latestBySub: Record<string, { paidDate: string; amount: number; subName: string }> = {};
+              Object.values(catExpenses).forEach(e => {
+                if (!isSubcategorized(e)) return;
+                Object.entries(e.subPaid).forEach(([scId, sp]) => {
+                  if (sp?.paid && sp.paidDate && (!latestBySub[scId] || sp.paidDate > latestBySub[scId].paidDate)) {
+                    const scName = (c.subcategories||[]).find(s=>s.id===scId)?.name || "Sub";
+                    latestBySub[scId] = { paidDate: sp.paidDate, amount: e.subAmounts?.[scId] || 0, subName: scName };
+                  }
+                });
               });
+              Object.values(latestBySub).forEach(line => recent.push({ cat: c.name, sub: line.subName, amount: line.amount, paidDate: line.paidDate }));
             }
           });
           recent.sort((a, b) => b.paidDate.localeCompare(a.paidDate));
